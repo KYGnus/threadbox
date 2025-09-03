@@ -1,0 +1,6 @@
+
+sudo zypper in ssdeep
+sudo zypper in exiftool
+sudo zypper in clamav
+sudo zypper in yara
+

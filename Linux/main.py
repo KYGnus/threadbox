@@ -7,7 +7,6 @@ from datetime import datetime
 import paramiko
 import ipaddress
 import concurrent.futures
-from installer import ClamAVInstaller, install_on_hosts
 from werkzeug.security import generate_password_hash, check_password_hash
 from concurrent.futures import ThreadPoolExecutor
 import concurrent
@@ -35,7 +34,8 @@ from modules import pcap
 import shlex
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from urllib.parse import unquote
-
+import threading
+from malware_scanner import MalwareAnalyzer, scan_directory
 
 
 
@@ -1961,6 +1961,155 @@ def download_pepper_result():
     except Exception as e:
         flash(f"Error downloading file: {str(e)}", "danger")
         return redirect(url_for('pepper_analysis_page'))
+
+
+
+@app.route('/malware-analysis')
+@login_required
+def malware_analysis_page():
+    return render_template(
+        'malware_analysis.html',
+        os=get_os(),
+        ip=get_lan_ip(),
+        time=datetime.now().strftime("%H:%M:%S")
+    )
+
+@app.route('/upload-malware-file', methods=['POST'])
+@login_required
+def upload_malware_file():
+    if 'malwarefile' not in request.files:
+        flash("❌ No file uploaded", "danger")
+        return redirect(url_for('malware_analysis_page'))
+
+    file = request.files['malwarefile']
+    if file.filename == '':
+        flash("⚠ No file selected", "warning")
+        return redirect(url_for('malware_analysis_page'))
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > MAX_FILE_SIZE:
+        flash("❌ File size exceeds maximum allowed (100MB)", "danger")
+        return redirect(url_for('malware_analysis_page'))
+
+    # Allow common executable and document formats
+    allowed_malware_extensions = {'exe', 'dll', 'scr', 'com', 'bat', 'cmd', 'ps1', 
+                                 'vbs', 'js', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+                                 'pdf', 'zip', 'rar', '7z'}
+    
+    if not (file and file.filename.lower().split('.')[-1] in allowed_malware_extensions):
+        flash("❌ Invalid file type for malware analysis", "danger")
+        return redirect(url_for('malware_analysis_page'))
+
+    try:
+        # Save the uploaded file
+        filename = secure_filename(file.filename)
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(upload_path)
+        
+        # Generate result filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        random_str = uuid.uuid4().hex[:6]
+        result_filename = f"malware_result_{timestamp}_{random_str}.json"
+        result_path = os.path.join(UPLOADS, result_filename)
+        
+        # Run malware analysis
+        analyzer = MalwareAnalyzer(upload_path)
+        result = analyzer.run_analysis()
+        
+        # Save results to JSON file
+        with open(result_path, 'w') as f:
+            json.dump(analyzer.results, f, indent=4)
+        
+        # Remove the uploaded file after analysis
+        os.remove(upload_path)
+        
+        # Store the result file path in session for download
+        session['latest_malware_result'] = result_filename
+        
+        flash("✅ File uploaded and analyzed successfully!", "success")
+        return render_template(
+            "malware_result.html",
+            filename=filename,
+            results=analyzer.results,
+            result_file=result_filename,
+            os=get_os(),
+            ip=get_lan_ip(),
+            time=datetime.now().strftime("%H:%M:%S")
+        )
+
+    except Exception as e:
+        # Clean up if something went wrong
+        if os.path.exists(upload_path):
+            os.remove(upload_path)
+        if 'result_path' in locals() and os.path.exists(result_path):
+            os.remove(result_path)
+        flash(f"❌ Error analyzing file: {str(e)}", "danger")
+        return redirect(url_for('malware_analysis_page'))
+
+@app.route('/download-malware-result')
+@login_required
+def download_malware_result():
+    if 'latest_malware_result' not in session:
+        flash("No analysis result available for download", "warning")
+        return redirect(url_for('malware_analysis_page'))
+    
+    result_filename = session['latest_malware_result']
+    result_path = os.path.join(UPLOADS, result_filename)
+    
+    if not os.path.exists(result_path):
+        flash("Result file not found", "danger")
+        return redirect(url_for('malware_analysis_page'))
+    
+    try:
+        return send_file(
+            result_path,
+            as_attachment=True,
+            download_name=f"malware_analysis_{datetime.now().strftime('%Y%m%d')}.json",
+            mimetype='application/json'
+        )
+    except Exception as e:
+        flash(f"Error downloading file: {str(e)}", "danger")
+        return redirect(url_for('malware_analysis_page'))
+
+@app.route('/perform-malware-scan', methods=['POST'])
+@login_required
+def perform_malware_scan():
+    data = request.get_json()
+    path = data.get('path')
+
+    def generate():
+        yield "data: 🔍 Starting malware analysis...\n\n"
+        try:
+            analyzer = MalwareAnalyzer(path)
+            result = analyzer.run_analysis()
+            
+            # Stream results
+            yield f"data: 📊 Analysis completed. Verdict: {result['verdict']}\n\n"
+            yield f"data: 🎯 Malicious Score: {result['score']}\n\n"
+            
+            if 'detection_details' in analyzer.results:
+                for detail in analyzer.results['detection_details']:
+                    yield f"data: ⚠️ {detail['source'].upper()}: {detail['description']} ({detail['points']} points)\n\n"
+            
+            if result['verdict'] in ['MALICIOUS', 'HIGHLY_MALICIOUS']:
+                yield "data: 🚨 MALICIOUS FILE DETECTED!\n\n"
+            elif result['verdict'] == 'SUSPICIOUS':
+                yield "data: ⚠️ Suspicious file detected\n\n"
+            else:
+                yield "data: ✅ File appears clean\n\n"
+                
+            yield "data: ✅ Malware analysis completed\n\n"
+        except Exception as e:
+            yield f"data: ❌ Error during malware analysis: {str(e)}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream')
+
+
+
+
 
 
 @app.route("/about")
