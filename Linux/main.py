@@ -952,12 +952,12 @@ def network_scan_page():
 @login_required
 def scan():
     path = request.args.get("scan_path")
-    path = unquote(path) if path else None  # Decode URL-encoded path here
+    path = unquote(path) if path else None
     print(f"Decoded scan path: {path}")
     remote_host = request.args.get("remote_host")
     username = request.args.get("remote_user")
     password = request.args.get("remote_pass")
-    port = request.args.get("remote_port", "22")  # Default to 22 if not specified
+    port = request.args.get("remote_port", "22")
 
     def generate():
         yield "data: 🔄 Starting scan...\n\n"
@@ -975,29 +975,40 @@ def scan():
                 # SSH mode
                 yield f"data: 🔗 Connecting to remote host {remote_host}:{port}...\n\n"
                 try:
+                    # Get the remote OS and command output
                     remote_os, stdout, stderr = ssh_scan(remote_host, username, password, path, port=port_num)
                     yield f"data: 💻 Remote OS: {remote_os}\n\n"
                     
-                    # Read output line by line with timeout
-                    start_time = time.time()
-                    timeout = 300  # 5 minutes timeout
+                    # Check if stdout is a string (already decoded) or bytes
+                    if isinstance(stdout, str):
+                        # If it's already a string, just yield it line by line
+                        for line in stdout.splitlines():
+                            yield f"data: {line}\n\n"
+                    else:
+                        # If it's bytes, decode it properly
+                        start_time = time.time()
+                        timeout = 300  # 5 minutes timeout
+                        
+                        while True:
+                            line = stdout.readline()
+                            if line:
+                                try:
+                                    # Check if line is bytes or string
+                                    if isinstance(line, bytes):
+                                        decoded_line = line.decode('utf-8', errors='replace').strip()
+                                    else:
+                                        decoded_line = line.strip()
+                                    yield f"data: {decoded_line}\n\n"
+                                except UnicodeDecodeError:
+                                    yield "data: [binary data]\n\n"
+                            elif time.time() - start_time > timeout:
+                                yield "data: ⏰ Timeout waiting for scan output\n\n"
+                                break
+                            elif stdout.channel.exit_status_ready():
+                                break
+                            else:
+                                time.sleep(0.1)
                     
-                    while True:
-                        line = stdout.readline()
-                        if line:
-                            try:
-                                decoded_line = line.decode('utf-8', errors='replace').strip()
-                                yield f"data: {decoded_line}\n\n"
-                            except UnicodeDecodeError:
-                                yield "data: [binary data]\n\n"
-                        elif time.time() - start_time > timeout:
-                            yield "data: ⏰ Timeout waiting for scan output\n\n"
-                            break
-                        elif stdout.channel.exit_status_ready():
-                            break
-                        else:
-                            time.sleep(0.1)  # Small delay to prevent busy waiting
-                            
                     yield "data: ✅ Remote scan finished.\n\n"
                 except paramiko.AuthenticationException:
                     yield "data: ❌ Authentication failed\n\n"
@@ -1015,11 +1026,12 @@ def scan():
                         build_command(path), 
                         stdout=subprocess.PIPE, 
                         stderr=subprocess.STDOUT,
-                        bufsize=1
+                        bufsize=1,
+                        universal_newlines=True  # This ensures text mode, not bytes
                     )
                     
-                    for line in iter(process.stdout.readline, b''):  # Note the b'' for bytes
-                        yield f"data: {line.decode('utf-8', errors='replace').strip()}\n\n"
+                    for line in iter(process.stdout.readline, ''):  # Empty string indicates EOF
+                        yield f"data: {line.strip()}\n\n"
                         
                     process.stdout.close()
                     return_code = process.wait()
@@ -1046,7 +1058,7 @@ def install():
     hosts = [h.strip() for h in request.form.get("install_hosts", "").split(',') if h.strip()]
     username = request.form.get("install_user", "")
     password = request.form.get("install_pass", "")
-    port = request.form.get("install_port", "22")  # Default to 22 if not specified
+    port = request.form.get("install_port", "22")
     
     def generate():
         yield "data: 🔧 Starting ClamAV installation on remote hosts...\n\n"
@@ -1065,12 +1077,13 @@ def install():
                 return
                 
             yield f"data: ⚙️ Attempting to install on {len(hosts)} hosts using port {port}...\n\n"
+            yield "data: ⏳ This may take several minutes...\n\n"
             
             # Process hosts in parallel with ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=3) as executor:  # Reduced workers to avoid overloading
                 future_to_host = {
                     executor.submit(
-                        install_on_single_host,
+                        install_on_single_host_with_retry,
                         host,
                         username,
                         password,
@@ -1096,22 +1109,49 @@ def install():
 
     return Response(generate(), mimetype='text/event-stream')
 
-def install_on_single_host(host, username, password, port):
-    """Helper function to install on a single host with proper error handling"""
-    try:
-        installer = ClamAVInstaller(host, username, password, port=port)
-        return installer.install()
-    except paramiko.AuthenticationException:
-        return False, "Authentication failed"
-    except paramiko.SSHException as e:
-        return False, f"SSH error: {str(e)}"
-    except socket.timeout:
-        return False, "Connection timed out"
-    except Exception as e:
-        return False, f"Error: {str(e)}"
-    finally:
-        if hasattr(installer, 'ssh') and installer.ssh:
-            installer.ssh.close()
+def install_on_single_host_with_retry(host, username, password, port):
+    """Helper function with retry mechanism for package manager locks"""
+    max_retries = 3
+    retry_delay = 30  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            installer = ClamAVInstaller(host, username, password, port=port)
+            success, message = installer.install()
+            
+            if success:
+                return True, message
+            elif "Could not get lock" in message or "Unable to lock" in message:
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (attempt + 1)
+                    time.sleep(wait_time)
+                    continue
+                return False, f"Package manager locked after {max_retries} attempts"
+            else:
+                return success, message
+                
+        except paramiko.AuthenticationException:
+            return False, "Authentication failed"
+        except paramiko.SSHException as e:
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (attempt + 1))
+                continue
+            return False, f"SSH error: {str(e)}"
+        except socket.timeout:
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (attempt + 1))
+                continue
+            return False, "Connection timed out"
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (attempt + 1))
+                continue
+            return False, f"Error: {str(e)}"
+        finally:
+            if 'installer' in locals() and hasattr(installer, 'ssh') and installer.ssh:
+                installer.ssh.close()
+    
+    return False, "Max retries exceeded"
 
 
 @app.route('/ioc-scan')
