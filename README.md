@@ -196,6 +196,20 @@ cd app
 python main.py
 ```
 
+
+**run in Firejail**
+
+```
+# run your venv python in firejail, no network, private home and tmp
+firejail --private=/home/koosha/sandbox-home \
+         --net=none \
+         --caps.drop=all \
+         --private-tmp \
+         --whitelist=/path/to/allowed/data \
+         /path/to/venv/bin/python /path/to/app.py
+
+```
+
 ---
 
 ## 📃 License
