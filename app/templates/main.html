@@ -13,169 +13,280 @@
 
   <!-- Red and Black Aesthetic -->
   <style>
+    body {
+      background-image: url(../static/GIF-Cybersecurity-Lockv2.gif);
+      background-size: cover;
+      background-attachment: fixed;
+      font-family: "Red Hat Text", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: #000000;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-  body {
-    background-image: url(../static/GIF-Cybersecurity-Lockv2.gif);
-    background-size: cover;
-    font-family: "Red Hat Text", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    color: #000000;
-    padding: 40px 0;
-    min-height: 100vh;
-  }
+    h1, h2, h3, h4, h5 {
+      font-weight: 700;
+      color: #fff;
+    }
 
-  h1, h2, h3, h4, h5 {
-    font-weight: 700;
-    color: #fff;
-  }
+    h1 {
+      border-bottom: 2px solid #cc0000;
+      padding-bottom: 0.4rem;
+      margin-bottom: 1.5rem;
+    }
 
-  h1 {
-    border-bottom: 2px solid #cc0000;
-    padding-bottom: 0.4rem;
-    margin-bottom: 1.5rem;
-  }
+    /* Navbar */
+    .navbar, .sb-sidenav {
+      background-color: rgba(18, 18, 18, 0.95) !important;
+      border-bottom: 2px solid #cc0000;
+      backdrop-filter: blur(10px);
+    }
 
-  /* Navbar */
-  .navbar, .sb-sidenav {
-    background-color: #121212 !important;
-    border-bottom: 2px solid #cc0000;
-  }
+    .navbar-brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff !important;
+    }
 
-  .navbar-brand {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #fff !important;
-  }
+    .navbar-brand:hover {
+      color: #ff4d4d !important;
+    }
 
-  .navbar-brand:hover {
-    color: #ff4d4d !important;
-  }
+    /* Cards */
+    .card {
+      border: none;
+      border-radius: 12px;
+      background-color: rgba(38, 38, 38, 0.9);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      height: 100%;
+    }
 
-  /* Sidebar Links */
-  .nav-link {
-    color: #bbb;
-    padding: 0.65rem 1rem;
-    border-radius: 6px;
-    margin-bottom: 4px;
-    transition: background 0.2s, color 0.2s;
-  }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(204, 0, 0, 0.2);
+    }
 
-  .nav-link:hover {
-    background-color: rgba(204, 0, 0, 0.2);
-    color: #fff;
-  }
+    .card-header {
+      background: linear-gradient(135deg, #cc0000 0%, #990000 100%);
+      color: #fff;
+      font-weight: 600;
+      padding: 1rem 1.25rem;
+      border-radius: 12px 12px 0 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-  .nav-link.active {
-    background-color: #cc0000;
-    color: #fff;
-  }
+    .card-body {
+      padding: 1.5rem;
+      background-color: rgba(28, 28, 28, 0.8);
+      color: #ddd;
+    }
 
-  .sb-sidenav .nav-link .sb-nav-link-icon {
-    color: #cc0000;
-  }
+    /* Circular Progress Styles */
+    .circular-progress-container {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto;
+    }
 
-  /* Cards */
-  .card {
-    border: none;
-    border-radius: 6px;
-    background-color: #2a2a2a;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-    transition: transform 0.15s ease;
-  }
+    .circular-progress-bg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    }
 
-/* Cards - Red Hat Style */
-.card {
-  border: none;
-  border-radius: 6px;
-  background-color: #262626;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
+    .circular-progress-fill {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 50% 0%);
+      background: conic-gradient(
+        #cc0000 0deg,
+        rgba(204, 0, 0, 0.2) 0deg
+      );
+      transition: background 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-.card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.5);
-}
+    .circular-progress-inner {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(28, 28, 28, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
 
-.card-header {
-  background-color: #cc0000;
-  color: #fff;
-  font-weight: 600;
-  padding: 0.7rem 1rem;
-  border-radius: 6px 6px 0 0;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
+    .circular-progress-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #ff9999);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-.card-body {
-  padding: 1.25rem;
-  background-color: #1c1c1c;
-  color: #ddd;
-}
+    .circular-progress-label {
+      font-size: 0.9rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
 
-.card-body h5 {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #ccc;
-}
+    /* Progress Bars */
+    .progress-container {
+      margin-top: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      height: 12px;
+    }
 
-.card-body h2 {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #fff;
-}
+    .progress-bar-animated {
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #cc0000, #ff3333);
+      transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
 
-.card-body p {
-  margin: 0.3rem 0;
-  font-size: 0.9rem;
-  color: #aaa;
-}
+    .progress-bar-animated::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      animation: shimmer 2s infinite;
+    }
 
-.card-footer {
-  background: #1c1c1c;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  font-size: 0.85rem;
-  padding: 0.6rem 1rem;
-  color: #999;
-  border-radius: 0 0 6px 6px;
-}
+    /* Animations */
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(100%);
+      }
+    }
 
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  /* Alerts */
-  .alert-dark {
-    background-color: #2a2a2a;
-    color: #fff;
-    border-left: 4px solid #cc0000;
-    border-radius: 6px;
-    padding: 1rem;
-  }
+    /* Live Indicator */
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: #cc0000;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 1.5s infinite;
+    }
 
-  /* Breadcrumb */
-  .breadcrumb {
-    background: transparent;
-    font-size: 0.9rem;
-    margin-bottom: 1.5rem;
-  }
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+      }
+    }
 
-  .breadcrumb-item.active {
-    color: #ff4d4d;
-  }
+    /* Alert Styles */
+    .alert-dark {
+      animation: fadeInUp 0.6s ease-out;
+      background-color: rgba(42, 42, 42, 0.9);
+      color: #fff;
+      border-left: 4px solid #cc0000;
+      border-radius: 12px;
+      padding: 1.25rem;
+      backdrop-filter: blur(10px);
+    }
 
-  /* Footer */
-  footer {
-    border-top: 1px solid rgba(255,255,255,0.08);
-    background-color: #121212;
-    color: #aaa;
-    padding: 1rem 0;
-  }
+    /* Metric Cards */
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #ff9999);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 10px rgba(204, 0, 0, 0.3);
+    }
 
-  /* Canvas Usage Circles */
-  canvas {
-    background: transparent;
-    border-radius: 50%;
-  }
-</style>
+    .metric-label {
+      font-size: 0.9rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
 
+    /* Update Time */
+    .update-time {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 0.5rem;
+    }
+
+    /* Network Status */
+    .network-status {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      align-items: center;
+    }
+
+    .network-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(204, 0, 0, 0.2);
+      animation: pulse 2s infinite;
+    }
+
+    /* Badge for percentages */
+    .badge-percent {
+      background: linear-gradient(135deg, #cc0000, #990000);
+      color: white;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 
 <body class="sb-nav-fixed">
@@ -238,57 +349,135 @@
     <div id="layoutSidenav_content">
       <main class="p-4">
         <div class="d-flex justify-content-between align-items-center">
-          <h1 class="mb-3 text-glow">clamNET</h1>
+          <h1 class="mb-3 text-glow">clamNET <span class="live-indicator"></span><small class="ms-2 text-muted">Live</small></h1>
           <img src="../static/ClamAV.svg" alt="ClamAV Logo" height="60" />
         </div>
 
         <ol class="breadcrumb mb-4">
           <li class="breadcrumb-item active">System Summary</li>
+          <li class="breadcrumb-item text-muted">Last updated: <span id="lastUpdate">{{ time }}</span></li>
         </ol>
 
-        <!-- Info Cards -->
+        <!-- System Info Cards -->
         <div class="row">
           <div class="col-xl-4 col-md-6 mb-4">
-             <div class="alert alert-dark mb-3">
-              <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                  <h5>Local IP Address</h5>
-                  <h2>{{ ip }}</h2>
-                </div>
-                <i class="fas fa-network-wired fs-1"></i>
+            <div class="card">
+              <div class="card-header">
+                <i class="fas fa-network-wired"></i> Network Interface
               </div>
-              <div class="card-footer d-flex justify-content-between">
-                <span>Network Interface</span><i class="fas fa-angle-right"></i>
+              <div class="card-body">
+                <div class="metric-value">{{ ip or '127.0.0.1' }}</div>
+                <div class="metric-label">Local IP Address</div>
+                <div class="network-status mt-3">
+                  <div class="network-icon">
+                    <i class="fas fa-wifi"></i>
+                  </div>
+                  <div>
+                    <small class="text-success">Connected</small><br>
+                    <small class="text-muted">Active</small>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="col-xl-4 col-md-6 mb-4">
-             <div class="alert alert-dark mb-3">
-              <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                  <h5>Operating System</h5>
-                  <h2>{{ os }}</h2>
-                </div>
-                <i class="fas fa-laptop fs-1"></i>
+            <div class="card">
+              <div class="card-header">
+                <i class="fas fa-laptop"></i> Platform
               </div>
-              <div class="card-footer d-flex justify-content-between">
-                <span>Platform</span><i class="fas fa-angle-right"></i>
+              <div class="card-body">
+                <div class="metric-value">{{ os or 'Unknown OS' }}</div>
+                <div class="metric-label">Operating System</div>
+                <div class="progress-container mt-3">
+                  <div class="progress-bar-animated" id="systemHealthBar"></div>
+                </div>
+                <small class="text-muted d-block mt-2">System Health</small>
               </div>
             </div>
           </div>
 
           <div class="col-xl-4 col-md-6 mb-4">
-            <div class="alert alert-dark mb-3">
-              <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                  <h5>System Time</h5>
-                  <h2>{{ time }}</h2>
-                </div>
-                <i class="fas fa-clock fs-1"></i>
+            <div class="card">
+              <div class="card-header">
+                <i class="fas fa-clock"></i> System Time
               </div>
-              <div class="card-footer d-flex justify-content-between">
-                <span>Last Updated</span><i class="fas fa-angle-right"></i>
+              <div class="card-body">
+                <div class="metric-value" id="liveTime">{{ time }}</div>
+                <div class="metric-label">Last Updated</div>
+                <div class="update-time">
+                  <i class="fas fa-sync-alt me-1"></i>
+                  Auto-refresh: <span id="refreshTimer">30s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resource Usage Section -->
+        <div class="row mb-5">
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="fas fa-microchip"></i> CPU Usage
+                </div>
+                <span class="badge-percent" id="cpuBadge">{{ cpu }}%</span>
+              </div>
+              <div class="card-body">
+                <div class="circular-progress-container">
+                  <div class="circular-progress-bg"></div>
+                  <div class="circular-progress-fill" id="cpuProgressFill"></div>
+                  <div class="circular-progress-inner">
+                    <div class="circular-progress-value" id="cpuValue">{{ cpu }}%</div>
+                    <div class="circular-progress-label">CPU Load</div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span>Processes: <strong>{{ processes or '0' }}</strong></span>
+                    <span>Threads: <strong>{{ threads or '0' }}</strong></span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar-animated" id="cpuBar"></div>
+                  </div>
+                  <div class="mt-2 text-center">
+                    <small class="text-muted" id="cpuFrequency">Frequency: {{ cpu_freq or 'N/A' }} GHz</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-4">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="fas fa-memory"></i> RAM Usage
+                </div>
+                <span class="badge-percent" id="ramBadge">{{ ram }}%</span>
+              </div>
+              <div class="card-body">
+                <div class="circular-progress-container">
+                  <div class="circular-progress-bg"></div>
+                  <div class="circular-progress-fill" id="ramProgressFill"></div>
+                  <div class="circular-progress-inner">
+                    <div class="circular-progress-value" id="ramValue">{{ ram }}%</div>
+                    <div class="circular-progress-label">Memory Used</div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span>Used: <strong id="usedMemory">{{ used_memory or '0 GB' }}</strong></span>
+                    <span>Total: <strong id="totalMemory">{{ total_memory or '0 GB' }}</strong></span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar-animated" id="ramBar"></div>
+                  </div>
+                  <div class="mt-2 text-center">
+                    <small class="text-muted" id="availableMemory">Available: {{ available_memory or '0 GB' }}</small>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -297,70 +486,41 @@
         <!-- ClamAV Paths -->
         <div class="row mt-4">
           <div class="col-xl-6 mb-4">
-            <div class="card text-white">
-              <div class="alert alert-dark mb-3">
-                <i class="fas fa-terminal me-2"></i> ClamAV Path on Linux
+            <div class="card">
+              <div class="card-header">
+                <i class="fas fa-terminal"></i> ClamAV Path on Linux
               </div>
               <div class="card-body">
-                <p><strong>Executable:</strong> <code>{{ clamav_path_linux }}</code></p>
-                <p><strong>Database Path:</strong> <code>{{ clamav_db_path_linux }}</code></p>
+                <div class="alert alert-dark">
+                  <h6><i class="fas fa-file-code me-2"></i>Executable</h6>
+                  <code class="d-block mt-2 p-2 bg-dark rounded">{{ clamav_path_linux or 'Not configured' }}</code>
+                </div>
+                <div class="alert alert-dark mt-3">
+                  <h6><i class="fas fa-database me-2"></i>Database Path</h6>
+                  <code class="d-block mt-2 p-2 bg-dark rounded">{{ clamav_db_path_linux or 'Not configured' }}</code>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="col-xl-6 mb-4">
-            <div class="card text-white">
-               <div class="alert alert-dark mb-3">
-                <i class="fab fa-windows me-2"></i> ClamAV Path on Windows
+            <div class="card">
+              <div class="card-header">
+                <i class="fab fa-windows"></i> ClamAV Path on Windows
               </div>
               <div class="card-body">
-                <p><strong>Executable:</strong> <code>{{ clamav_path_windows }}</code></p>
-                <p><strong>Database Path:</strong> <code>{{ clamav_db_path_windows }}</code></p>
+                <div class="alert alert-dark">
+                  <h6><i class="fas fa-file-code me-2"></i>Executable</h6>
+                  <code class="d-block mt-2 p-2 bg-dark rounded">{{ clamav_path_windows or 'Not configured' }}</code>
+                </div>
+                <div class="alert alert-dark mt-3">
+                  <h6><i class="fas fa-database me-2"></i>Database Path</h6>
+                  <code class="d-block mt-2 p-2 bg-dark rounded">{{ clamav_db_path_windows or 'Not configured' }}</code>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="row mb-5">
-            <div class="col-md-6">
-              <div class="card text-white">
-                 <div class="alert alert-dark mb-3">
-                  <i class="fas fa-microchip me-2"></i> CPU Usage
-                </div>
-                <div class="card-body text-center">
-                  <canvas id="cpuCanvas" width="200" height="200"></canvas>
-                  <h5 class="mt-3">CPU: <span id="cpuPercent">{{ cpu }}%</span></h5>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card text-white">
-                 <div class="alert alert-dark mb-3">
-                  <i class="fas fa-memory me-2"></i> RAM Usage
-                </div>
-                <div class="card-body text-center">
-                  <canvas id="ramCanvas" width="200" height="200"></canvas>
-                  <h5 class="mt-3">RAM: <span id="ramPercent">{{ ram }}%</span></h5>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- <div class="row mb-4">
-          <div class="col-xl-12 col-md-12 mb-4">
-            <div class="card text-white">
-              <div class="alert alert-dark mb-3">
-                <i class="fas fa-network-wired me-2"></i> Network Packet Status
-              </div>
-              <div class="card-body">
-                <p><strong>Packets Sent:</strong> <span class="text-glow">{{ net_packets_sent }}</span></p>
-                <p><strong>Packets Received:</strong> <span class="text-glow">{{ net_packets_recv }}</span></p>
-                <p><strong>Bytes Sent:</strong> <span class="text-glow">{{ net_bytes_sent | humanize_bytes }}</span></p>
-                <p><strong>Bytes Received:</strong> <span class="text-glow">{{ net_bytes_recv | humanize_bytes }}</span></p>
-              </div>
-            </div>
-          </div>
-        </div> -->
 
       </main>
 
@@ -370,9 +530,8 @@
           <div class="d-flex justify-content-between align-items-center small">
             <div class="text-muted">© clamNET 2025</div>
             <div>
-              <a href="#">Privacy</a>
-              &middot;
-              <a href="#">Terms</a>
+              <a href="#" class="text-decoration-none me-3">Privacy</a>
+              <a href="#" class="text-decoration-none">Terms</a>
             </div>
           </div>
         </div>
@@ -384,43 +543,217 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js"></script>
   <script src="../static/js/scripts.js"></script>
-<script>
-function drawUsage(canvasId, percent, color) {
-  const canvas = document.getElementById(canvasId);
-  const ctx = canvas.getContext('2d');
-  const radius = canvas.width / 2 - 10;
-  const center = canvas.width / 2;
+  
+  <script>
+    // Convert string values to numbers safely
+    function toNumber(value) {
+      if (value === null || value === undefined || value === '') {
+        return 0;
+      }
+      
+      // Remove non-numeric characters except decimal point
+      const cleanValue = String(value).replace(/[^0-9.]/g, '');
+      const num = parseFloat(cleanValue);
+      
+      // Return the number, or 0 if NaN
+      return isNaN(num) ? 0 : Math.min(100, Math.max(0, num));
+    }
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Get values from template variables
+    const cpuValueFromTemplate = "{{ cpu }}";
+    const ramValueFromTemplate = "{{ ram }}";
+    
+    // Convert to numbers
+    const cpuPercent = toNumber(cpuValueFromTemplate);
+    const ramPercent = toNumber(ramValueFromTemplate);
+    
+    console.log('CPU:', cpuPercent, 'RAM:', ramPercent); // Debug log
 
-  ctx.beginPath();
-  ctx.arc(center, center, radius, 0, 2 * Math.PI);
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 15;
-  ctx.stroke();
+    // Initialize circular progress with values
+    function initializeCircularProgress() {
+      // Set CPU progress
+      const cpuFill = document.getElementById('cpuProgressFill');
+      if (cpuFill) {
+        const cpuDegrees = (cpuPercent / 100) * 360;
+        cpuFill.style.background = `conic-gradient(
+          #cc0000 0deg,
+          #cc0000 ${cpuDegrees}deg,
+          rgba(204, 0, 0, 0.2) ${cpuDegrees}deg,
+          rgba(204, 0, 0, 0.2) 360deg
+        )`;
+      }
+      
+      // Set RAM progress
+      const ramFill = document.getElementById('ramProgressFill');
+      if (ramFill) {
+        const ramDegrees = (ramPercent / 100) * 360;
+        ramFill.style.background = `conic-gradient(
+          #990000 0deg,
+          #990000 ${ramDegrees}deg,
+          rgba(153, 0, 0, 0.2) ${ramDegrees}deg,
+          rgba(153, 0, 0, 0.2) 360deg
+        )`;
+      }
+      
+      // Update progress bars
+      const cpuBar = document.getElementById('cpuBar');
+      const ramBar = document.getElementById('ramBar');
+      const systemBar = document.getElementById('systemHealthBar');
+      
+      if (cpuBar) {
+        cpuBar.style.width = `${cpuPercent}%`;
+      }
+      if (ramBar) {
+        ramBar.style.width = `${ramPercent}%`;
+      }
+      if (systemBar) {
+        // System health is average of CPU and RAM
+        const systemHealth = (cpuPercent + ramPercent) / 2;
+        systemBar.style.width = `${systemHealth}%`;
+      }
+      
+      // Update badges
+      const cpuBadge = document.getElementById('cpuBadge');
+      const ramBadge = document.getElementById('ramBadge');
+      
+      if (cpuBadge) {
+        cpuBadge.textContent = `${cpuPercent}%`;
+      }
+      if (ramBadge) {
+        ramBadge.textContent = `${ramPercent}%`;
+      }
+    }
 
-  ctx.beginPath();
-  ctx.arc(center, center, radius, -Math.PI / 2, (2 * Math.PI * percent / 100) - Math.PI / 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 15;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = color;
-  ctx.stroke();
+    // Live time update
+    function updateLiveTime() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      
+      const liveTimeElement = document.getElementById('liveTime');
+      if (liveTimeElement) {
+        liveTimeElement.textContent = timeString;
+      }
+    }
 
-  ctx.shadowBlur = 0;
-}
+    // Refresh timer
+    let refreshSeconds = 30;
+    function updateRefreshTimer() {
+      const timerElement = document.getElementById('refreshTimer');
+      if (timerElement) {
+        refreshSeconds--;
+        
+        if (refreshSeconds <= 0) {
+          refreshSeconds = 30;
+          // Refresh the page
+          location.reload();
+        }
+        
+        timerElement.textContent = refreshSeconds + 's';
+      }
+    }
 
-window.onload = function() {
-  const cpu = parseFloat("{{ cpu }}");
-  const ram = parseFloat("{{ ram }}");
+    // Simulate dynamic resource updates
+    function simulateResourceUpdates() {
+      setInterval(() => {
+        // Update CPU
+        const cpuValueElement = document.getElementById('cpuValue');
+        const cpuBadge = document.getElementById('cpuBadge');
+        const cpuBar = document.getElementById('cpuBar');
+        const cpuFill = document.getElementById('cpuProgressFill');
+        
+        if (cpuValueElement && cpuBadge && cpuBar && cpuFill) {
+          const currentCpu = toNumber(cpuValueElement.textContent.replace('%', ''));
+          // Add slight variation (±2-3%)
+          const variation = (Math.random() - 0.5) * 6;
+          const newCpu = Math.min(100, Math.max(0, currentCpu + variation));
+          
+          // Update all CPU displays
+          cpuValueElement.textContent = `${newCpu.toFixed(1)}%`;
+          cpuBadge.textContent = `${newCpu.toFixed(1)}%`;
+          cpuBar.style.width = `${newCpu}%`;
+          
+          // Update circular progress
+          const cpuDegrees = (newCpu / 100) * 360;
+          cpuFill.style.background = `conic-gradient(
+            #cc0000 0deg,
+            #cc0000 ${cpuDegrees}deg,
+            rgba(204, 0, 0, 0.2) ${cpuDegrees}deg,
+            rgba(204, 0, 0, 0.2) 360deg
+          )`;
+        }
+        
+        // Update RAM
+        const ramValueElement = document.getElementById('ramValue');
+        const ramBadge = document.getElementById('ramBadge');
+        const ramBar = document.getElementById('ramBar');
+        const ramFill = document.getElementById('ramProgressFill');
+        
+        if (ramValueElement && ramBadge && ramBar && ramFill) {
+          const currentRam = toNumber(ramValueElement.textContent.replace('%', ''));
+          // Add slight variation (±1-2%)
+          const variation = (Math.random() - 0.5) * 4;
+          const newRam = Math.min(100, Math.max(0, currentRam + variation));
+          
+          // Update all RAM displays
+          ramValueElement.textContent = `${newRam.toFixed(1)}%`;
+          ramBadge.textContent = `${newRam.toFixed(1)}%`;
+          ramBar.style.width = `${newRam}%`;
+          
+          // Update circular progress
+          const ramDegrees = (newRam / 100) * 360;
+          ramFill.style.background = `conic-gradient(
+            #990000 0deg,
+            #990000 ${ramDegrees}deg,
+            rgba(153, 0, 0, 0.2) ${ramDegrees}deg,
+            rgba(153, 0, 0, 0.2) 360deg
+          )`;
+        }
+        
+        // Update system health bar
+        const systemBar = document.getElementById('systemHealthBar');
+        if (systemBar && cpuValueElement && ramValueElement) {
+          const currentCpu = toNumber(cpuValueElement.textContent.replace('%', ''));
+          const currentRam = toNumber(ramValueElement.textContent.replace('%', ''));
+          const systemHealth = (currentCpu + currentRam) / 2;
+          systemBar.style.width = `${systemHealth}%`;
+        }
+      }, 3000); // Update every 3 seconds
+    }
 
-  document.getElementById('cpuPercent').textContent = cpu + '%';
-  document.getElementById('ramPercent').textContent = ram + '%';
-
-  drawUsage('cpuCanvas', cpu, '#d63333');
-  drawUsage('ramCanvas', ram, '#6f1d1d');
-}
-</script>
-
+    // Initialize everything when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize progress indicators
+      initializeCircularProgress();
+      
+      // Start timers
+      setInterval(updateLiveTime, 1000);
+      setInterval(updateRefreshTimer, 1000);
+      
+      // Start simulation after 2 seconds
+      setTimeout(simulateResourceUpdates, 2000);
+      
+      // Initial call
+      updateLiveTime();
+      
+      // Add hover effects to cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-5px)';
+          this.style.boxShadow = '0 8px 25px rgba(204, 0, 0, 0.2)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+        });
+      });
+    });
+  </script>
 </body>
 </html>

@@ -36,7 +36,21 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 from urllib.parse import unquote
 import threading
 from malware_scanner import MalwareAnalyzer, scan_directory
-
+import pyshark
+import pandas as pd
+import numpy as np
+from collections import defaultdict, Counter
+import json
+from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
+import base64
+from scapy.all import *
+from scapy.layers.http import HTTPRequest
+import warnings
+warnings.filterwarnings("ignore")
 
 
 
@@ -83,6 +97,483 @@ def load_user(user_id):
     if user_id == ADMIN_USERNAME:
         return User(user_id)
     return None
+
+
+
+class EnhancedPCAPAnalyzer:
+    def __init__(self, pcap_path):
+        self.pcap_path = pcap_path
+        self.capture = None
+        self.results = {
+            'basic_stats': {},
+            'protocols': {},
+            'top_talkers': {},
+            'anomalies': {},
+            'security_indicators': {},
+            'traffic_patterns': {},
+            'geographical_info': {},
+            'timeline': [],
+            'visualizations': {}
+        }
+    
+    def _convert_to_python_types(self, obj):
+        """Convert numpy types and other non-JSON serializable types to Python types"""
+        if isinstance(obj, (np.integer, np.floating)):
+            return int(obj) if isinstance(obj, np.integer) else float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {k: self._convert_to_python_types(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._convert_to_python_types(item) for item in obj]
+        elif isinstance(obj, (np.bool_)):
+            return bool(obj)
+        elif obj is np.ma.masked:
+            return None
+        else:
+            return obj
+    
+    def analyze(self):
+        """Main analysis method"""
+        try:
+            # Load PCAP
+            self.capture = pyshark.FileCapture(self.pcap_path, 
+                                             keep_packets=False,
+                                             display_filter='')
+            
+            packets = []
+            for packet in self.capture:
+                packets.append(packet)
+            
+            if not packets:
+                return self.results
+            
+            # Perform all analyses
+            self._calculate_basic_stats(packets)
+            self._analyze_protocols(packets)
+            self._identify_top_talkers(packets)
+            self._detect_anomalies(packets)
+            self._check_security_indicators(packets)
+            self._analyze_traffic_patterns(packets)
+            self._extract_timeline(packets)
+            self._generate_visualizations(packets)
+            
+            # Convert all numpy types to Python native types for JSON serialization
+            self.results = self._convert_to_python_types(self.results)
+            
+            return self.results
+            
+        except Exception as e:
+            self.results['error'] = str(e)
+            return self.results
+        finally:
+            if self.capture:
+                self.capture.close()
+    
+    def _calculate_basic_stats(self, packets):
+        """Calculate basic statistics"""
+        total_size = sum(int(packet.length) for packet in packets if hasattr(packet, 'length'))
+        durations = []
+        
+        for packet in packets:
+            try:
+                if hasattr(packet, 'sniff_time'):
+                    durations.append(packet.sniff_time.timestamp())
+            except:
+                continue
+        
+        if durations:
+            duration_seconds = float(max(durations) - min(durations))
+            self.results['basic_stats'] = {
+                'total_packets': len(packets),
+                'total_bytes': int(total_size),
+                'avg_packet_size': float(total_size / len(packets)) if packets else 0.0,
+                'duration_seconds': duration_seconds,
+                'packet_rate': float(len(packets) / duration_seconds) if duration_seconds > 0 else 0.0,
+                'byte_rate': float(total_size / duration_seconds) if duration_seconds > 0 else 0.0,
+                'start_time': datetime.fromtimestamp(min(durations)).isoformat() if durations else None,
+                'end_time': datetime.fromtimestamp(max(durations)).isoformat() if durations else None
+            }
+        else:
+            self.results['basic_stats'] = {
+                'total_packets': len(packets),
+                'total_bytes': int(total_size),
+                'avg_packet_size': float(total_size / len(packets)) if packets else 0.0,
+                'duration_seconds': 0.0,
+                'packet_rate': 0.0,
+                'byte_rate': 0.0,
+                'start_time': None,
+                'end_time': None
+            }
+    
+    def _analyze_protocols(self, packets):
+        """Analyze protocol distribution"""
+        protocol_counter = Counter()
+        layer_counter = Counter()
+        
+        for packet in packets:
+            try:
+                # Count highest layer protocol
+                if hasattr(packet, 'highest_layer'):
+                    protocol_counter[packet.highest_layer] += 1
+                
+                # Count all layers
+                for layer in packet.layers:
+                    layer_counter[layer.layer_name] += 1
+            except:
+                continue
+        
+        self.results['protocols'] = {
+            'highest_layer_distribution': dict(protocol_counter.most_common()),
+            'all_layers_distribution': dict(layer_counter.most_common()),
+            'unique_protocols': int(len(set(protocol_counter.keys())))
+        }
+    
+    def _identify_top_talkers(self, packets):
+        """Identify top talkers (IP addresses)"""
+        src_counter = Counter()
+        dst_counter = Counter()
+        conversation_counter = Counter()
+        
+        for packet in packets:
+            try:
+                if hasattr(packet, 'ip'):
+                    src = packet.ip.src
+                    dst = packet.ip.dst
+                    src_counter[src] += 1
+                    dst_counter[dst] += 1
+                    
+                    # Track conversations
+                    conversation = f"{src} ↔ {dst}"
+                    conversation_counter[conversation] += 1
+            except:
+                continue
+        
+        self.results['top_talkers'] = {
+            'top_sources': dict(src_counter.most_common(10)),
+            'top_destinations': dict(dst_counter.most_common(10)),
+            'top_conversations': dict(conversation_counter.most_common(10))
+        }
+    
+    def _detect_anomalies(self, packets):
+        """Detect anomalies in the traffic"""
+        anomalies = {
+            'large_packets': [],
+            'small_packets': [],
+            'rapid_fire': [],
+            'unusual_ports': []
+        }
+        
+        packet_times = []
+        port_usage = Counter()
+        
+        for i, packet in enumerate(packets):
+            try:
+                # Check packet size anomalies
+                if hasattr(packet, 'length'):
+                    size = int(packet.length)
+                    if size > 1500:  # Large packets
+                        anomalies['large_packets'].append({
+                            'index': i,
+                            'size': size,
+                            'protocol': packet.highest_layer if hasattr(packet, 'highest_layer') else 'Unknown'
+                        })
+                    elif size < 60:  # Small packets
+                        anomalies['small_packets'].append({
+                            'index': i,
+                            'size': size,
+                            'protocol': packet.highest_layer if hasattr(packet, 'highest_layer') else 'Unknown'
+                        })
+                
+                # Track timestamps for rapid fire detection
+                if hasattr(packet, 'sniff_time'):
+                    packet_times.append(float(packet.sniff_time.timestamp()))
+                
+                # Track port usage
+                if hasattr(packet, 'tcp'):
+                    port_usage[int(packet.tcp.srcport)] += 1
+                    port_usage[int(packet.tcp.dstport)] += 1
+                elif hasattr(packet, 'udp'):
+                    port_usage[int(packet.udp.srcport)] += 1
+                    port_usage[int(packet.udp.dstport)] += 1
+                    
+            except:
+                continue
+        
+        # Detect rapid fire packets
+        if packet_times:
+            try:
+                time_diffs = np.diff(sorted(packet_times))
+                rapid_indices = np.where(time_diffs < 0.001)[0]
+                if len(rapid_indices) > 0:
+                    # Convert numpy array to list of ints
+                    anomalies['rapid_fire'] = [int(idx) for idx in rapid_indices[:10]]
+            except:
+                anomalies['rapid_fire'] = []
+        
+        # Detect unusual ports (non-standard)
+        standard_ports = {20, 21, 22, 23, 25, 53, 80, 110, 143, 443, 465, 587, 993, 995, 3306, 3389}
+        for port, count in port_usage.most_common():
+            if port not in standard_ports and count > 5:
+                anomalies['unusual_ports'].append({
+                    'port': int(port),
+                    'count': int(count)
+                })
+        
+        self.results['anomalies'] = anomalies
+    
+    def _check_security_indicators(self, packets):
+        """Check for security indicators and potential threats"""
+        security = {
+            'suspicious_ips': [],
+            'port_scans': [],
+            'dns_tunneling': [],
+            'malicious_patterns': []
+        }
+        
+        # Known suspicious IP ranges (example)
+        suspicious_ranges = [
+            '10.0.0.0/8',  # Private network
+            '192.168.0.0/16',  # Private network
+            '172.16.0.0/12',  # Private network
+            '169.254.0.0/16',  # Link-local
+        ]
+        
+        dns_queries = Counter()
+        
+        for packet in packets:
+            try:
+                # Check for suspicious IPs
+                if hasattr(packet, 'ip'):
+                    src_ip = packet.ip.src
+                    dst_ip = packet.ip.dst
+                    
+                    # Check if IP is in suspicious ranges
+                    for ip_range in suspicious_ranges:
+                        try:
+                            if ipaddress.ip_address(src_ip) in ipaddress.ip_network(ip_range):
+                                if src_ip not in security['suspicious_ips']:
+                                    security['suspicious_ips'].append(src_ip)
+                            if ipaddress.ip_address(dst_ip) in ipaddress.ip_network(ip_range):
+                                if dst_ip not in security['suspicious_ips']:
+                                    security['suspicious_ips'].append(dst_ip)
+                        except:
+                            continue
+                
+                # Analyze DNS traffic for potential tunneling
+                if hasattr(packet, 'dns'):
+                    if hasattr(packet.dns, 'qry_name'):
+                        query = packet.dns.qry_name.lower()
+                        dns_queries[query] += 1
+                        
+                        # Check for suspicious DNS patterns
+                        if len(query) > 50:  # Very long domain names
+                            security['dns_tunneling'].append({
+                                'query': query,
+                                'length': len(query)
+                            })
+                
+                # Check for potential port scans
+                if hasattr(packet, 'tcp'):
+                    tcp_flags = getattr(packet.tcp, 'flags', '')
+                    if 'SYN' in str(tcp_flags) and 'ACK' not in str(tcp_flags):
+                        # Could be part of a port scan
+                        security['port_scans'].append({
+                            'src': packet.ip.src if hasattr(packet, 'ip') else 'Unknown',
+                            'dst': packet.ip.dst if hasattr(packet, 'ip') else 'Unknown',
+                            'dport': packet.tcp.dstport if hasattr(packet.tcp, 'dstport') else 'Unknown'
+                        })
+                        
+            except:
+                continue
+        
+        # Check DNS queries for suspicious patterns
+        for query, count in dns_queries.most_common():
+            if count > 10 and any(pattern in query for pattern in ['exe', 'dll', 'bat', 'ps1', 'vbs']):
+                security['malicious_patterns'].append({
+                    'type': 'suspicious_dns',
+                    'query': query,
+                    'count': int(count)
+                })
+        
+        self.results['security_indicators'] = security
+    
+    def _analyze_traffic_patterns(self, packets):
+        """Analyze traffic patterns and bandwidth usage"""
+        patterns = {
+            'protocol_bandwidth': {},
+            'time_based_patterns': {},
+            'burst_detection': {}
+        }
+        
+        protocol_bytes = defaultdict(int)
+        time_buckets = defaultdict(int)
+        
+        for packet in packets:
+            try:
+                if hasattr(packet, 'highest_layer') and hasattr(packet, 'length'):
+                    protocol = packet.highest_layer
+                    size = int(packet.length)
+                    protocol_bytes[protocol] += size
+                
+                if hasattr(packet, 'sniff_time'):
+                    minute_key = packet.sniff_time.strftime('%Y-%m-%d %H:%M')
+                    time_buckets[minute_key] += 1
+                    
+            except:
+                continue
+        
+        # Protocol bandwidth - ensure all values are ints
+        patterns['protocol_bandwidth'] = {k: int(v) for k, v in dict(protocol_bytes).items()}
+        
+        # Time-based patterns
+        if time_buckets:
+            time_values = list(time_buckets.values())
+            avg_packets_per_minute = float(np.mean(time_values)) if time_values else 0.0
+            std_packets_per_minute = float(np.std(time_values)) if len(time_values) > 1 else 0.0
+            
+            patterns['time_based_patterns'] = {
+                'avg_packets_per_minute': avg_packets_per_minute,
+                'std_packets_per_minute': std_packets_per_minute,
+                'max_packets_minute': int(max(time_values)) if time_values else 0,
+                'min_packets_minute': int(min(time_values)) if time_values else 0,
+                'peak_times': dict(sorted(time_buckets.items(), 
+                                        key=lambda x: x[1], 
+                                        reverse=True)[:5])
+            }
+        
+        # Burst detection
+        if len(packets) > 100:
+            window_size = 50
+            bursts = []
+            for i in range(0, len(packets) - window_size, window_size // 2):
+                window = packets[i:i+window_size]
+                packet_rate = len(window) / window_size
+                if packet_rate > 10:  # Threshold for burst
+                    bursts.append({
+                        'start_index': int(i),
+                        'packet_rate': float(packet_rate),
+                        'timestamp': window[0].sniff_time if hasattr(window[0], 'sniff_time') else None
+                    })
+            patterns['burst_detection'] = bursts[:5]
+        
+        self.results['traffic_patterns'] = patterns
+    
+    def _extract_timeline(self, packets):
+        """Extract timeline of significant events"""
+        timeline = []
+        
+        for i, packet in enumerate(packets[:100]):  # Limit to first 100 packets
+            try:
+                event = {
+                    'index': i,
+                    'timestamp': packet.sniff_time.isoformat() if hasattr(packet, 'sniff_time') else None,
+                    'protocol': packet.highest_layer if hasattr(packet, 'highest_layer') else 'Unknown',
+                    'src': getattr(packet.ip, 'src', 'Unknown') if hasattr(packet, 'ip') else 'Unknown',
+                    'dst': getattr(packet.ip, 'dst', 'Unknown') if hasattr(packet, 'ip') else 'Unknown',
+                    'size': int(packet.length) if hasattr(packet, 'length') else 0
+                }
+                
+                # Add flags for TCP
+                if hasattr(packet, 'tcp'):
+                    event['tcp_flags'] = str(packet.tcp.flags)
+                
+                # Add info for HTTP
+                if hasattr(packet, 'http'):
+                    event['http_method'] = getattr(packet.http, 'request_method', '')
+                    event['http_host'] = getattr(packet.http, 'host', '')
+                
+                timeline.append(event)
+            except:
+                continue
+        
+        self.results['timeline'] = timeline
+    
+    def _generate_visualizations(self, packets):
+        """Generate visualization data and plots"""
+        visualizations = {}
+        
+        try:
+            # Protocol distribution pie chart
+            if self.results['protocols'].get('highest_layer_distribution'):
+                protocols = self.results['protocols']['highest_layer_distribution']
+                plt.figure(figsize=(8, 6))
+                plt.pie(protocols.values(), labels=protocols.keys(), autopct='%1.1f%%')
+                plt.title('Protocol Distribution')
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight')
+                plt.close()
+                buf.seek(0)
+                visualizations['protocol_pie'] = base64.b64encode(buf.read()).decode('utf-8')
+            
+            # Packet size distribution histogram
+            sizes = [int(p.length) for p in packets if hasattr(p, 'length')]
+            if sizes:
+                plt.figure(figsize=(10, 6))
+                plt.hist(sizes, bins=50, alpha=0.7, color='#d63333')
+                plt.xlabel('Packet Size (bytes)')
+                plt.ylabel('Frequency')
+                plt.title('Packet Size Distribution')
+                plt.grid(True, alpha=0.3)
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight')
+                plt.close()
+                buf.seek(0)
+                visualizations['size_histogram'] = base64.b64encode(buf.read()).decode('utf-8')
+            
+            # Timeline plot
+            if self.results.get('timeline'):
+                times = []
+                sizes = []
+                for p in self.results['timeline']:
+                    if p['timestamp']:
+                        try:
+                            times.append(datetime.fromisoformat(p['timestamp']).timestamp())
+                            sizes.append(p['size'])
+                        except:
+                            continue
+                
+                if times and sizes:
+                    plt.figure(figsize=(12, 6))
+                    plt.scatter(times, sizes, alpha=0.6, c='#d63333', s=10)
+                    plt.xlabel('Time')
+                    plt.ylabel('Packet Size (bytes)')
+                    plt.title('Packet Timeline')
+                    plt.grid(True, alpha=0.3)
+                    plt.tight_layout()
+                    buf = io.BytesIO()
+                    plt.savefig(buf, format='png', bbox_inches='tight')
+                    plt.close()
+                    buf.seek(0)
+                    visualizations['timeline_scatter'] = base64.b64encode(buf.read()).decode('utf-8')
+            
+            # Top talkers bar chart
+            if self.results['top_talkers'].get('top_sources'):
+                top_sources = self.results['top_talkers']['top_sources']
+                plt.figure(figsize=(10, 6))
+                plt.barh(list(top_sources.keys())[::-1], list(top_sources.values())[::-1], 
+                        color='#6f1d1d')
+                plt.xlabel('Packet Count')
+                plt.title('Top Source IPs')
+                plt.tight_layout()
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight')
+                plt.close()
+                buf.seek(0)
+                visualizations['top_sources'] = base64.b64encode(buf.read()).decode('utf-8')
+                
+        except Exception as e:
+            visualizations['error'] = str(e)
+        
+        self.results['visualizations'] = visualizations
+
+
+# Backward compatibility function
+def analyze_pcap(pcap_path):
+    analyzer = EnhancedPCAPAnalyzer(pcap_path)
+    return analyzer.analyze()
+
+
 
 # Add connection test before main operations
 def test_connection(self):
@@ -1742,7 +2233,19 @@ def upload_pcap_file():
         file.save(upload_path)
 
         try:
-            data = pcap.analyze_pcap(upload_path)
+            # Use enhanced analyzer
+            analyzer = EnhancedPCAPAnalyzer(upload_path)
+            data = analyzer.analyze()
+            
+            # Save results for download
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            result_filename = f"pcap_result_{timestamp}.json"
+            result_path = os.path.join(UPLOADS, result_filename)
+            
+            with open(result_path, 'w') as f:
+                json.dump(data, f, indent=4, default=str)
+            
+            session['latest_pcap_result'] = result_filename
             
         except Exception as e:
             os.remove(upload_path)
@@ -1754,48 +2257,41 @@ def upload_pcap_file():
         flash("✅ PCAP file uploaded and analyzed successfully!", "success")
         return render_template(
             "pcap_result.html",
-            protocol_count=data["protocol_count"],
-            packets=data["packets"],
-            filename=filename
+            data=data,
+            filename=filename,
+            result_file=result_filename,
+            os=get_os(),
+            ip=get_lan_ip(),
+            time=datetime.now().strftime("%H:%M:%S")
         )
 
     flash("❌ Invalid file type. Please upload a .pcap or .pcapng file.", "danger")
     return redirect(url_for('pcap_scan_page'))
 
-
-def describe_packet(pkt):
-    # Format timestamp nicely
-    time_str = datetime.fromtimestamp(pkt['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
+@app.route('/download-pcap-result')
+@login_required
+def download_pcap_result():
+    if 'latest_pcap_result' not in session:
+        flash("No analysis result available for download", "warning")
+        return redirect(url_for('pcap_scan_page'))
     
-    # Human-readable protocol descriptions
-    protocol_desc = {
-        "TCP": "a reliable connection-oriented protocol (TCP)",
-        "UDP": "a fast, connectionless protocol (UDP)",
-        "ICMP": "a network diagnostic message (ICMP)",
-        "HTTP": "web traffic (HTTP)",
-        "DNS": "domain name system query (DNS)",
-        # add more protocols as needed
-    }
+    result_filename = session['latest_pcap_result']
+    result_path = os.path.join(UPLOADS, result_filename)
     
-    proto = pkt.get('protocol', 'Unknown').upper()
-    proto_text = protocol_desc.get(proto, f"protocol {proto}")
+    if not os.path.exists(result_path):
+        flash("Result file not found", "danger")
+        return redirect(url_for('pcap_scan_page'))
     
-    src = pkt.get('src', 'Unknown source')
-    dst = pkt.get('dst', 'Unknown destination')
-    
-    # Build descriptive sentence
-    desc = (
-        f"At {time_str}, a packet was sent from {src} to {dst} using {proto_text}."
-    )
-    
-    # Optionally add extra info, e.g. ports or packet size if available
-    if 'src_port' in pkt and 'dst_port' in pkt:
-        desc += f" Source port: {pkt['src_port']}, destination port: {pkt['dst_port']}."
-    if 'length' in pkt:
-        desc += f" Packet size: {pkt['length']} bytes."
-    
-    return desc
-
+    try:
+        return send_file(
+            result_path,
+            as_attachment=True,
+            download_name=f"pcap_analysis_{datetime.now().strftime('%Y%m%d')}.json",
+            mimetype='application/json'
+        )
+    except Exception as e:
+        flash(f"Error downloading file: {str(e)}", "danger")
+        return redirect(url_for('pcap_scan_page'))
 @app.route('/perform-pcap-scan', methods=['POST'])
 @login_required
 def perform_pcap_scan():
