@@ -41,7 +41,7 @@ ida-netnode==3.0
 ida-settings==2.1.0
 idna==3.10
 intervaltree==3.1.0
-ipython==9.1.0
+ipython==8.25.0
 ipython_pygments_lexers==1.1.1
 itsdangerous==2.2.0
 jedi==0.19.2
