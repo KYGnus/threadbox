@@ -51,7 +51,7 @@ from scapy.all import *
 from scapy.layers.http import HTTPRequest
 import warnings
 warnings.filterwarnings("ignore")
-from ai_models.security_llm import get_security_llm
+#from ai_models.security_llm import get_security_llm
 
 
 app = Flask(__name__)
@@ -97,6 +97,13 @@ def load_user(user_id):
     if user_id == ADMIN_USERNAME:
         return User(user_id)
     return None
+
+
+
+
+
+
+
 
 
 
@@ -2644,113 +2651,113 @@ def perform_malware_scan():
     return Response(generate(), mimetype='text/event-stream')
 
 
-security_llm = None
+# security_llm = None
 
-def init_ai_model():
-    """Initialize AI model on demand"""
-    global security_llm
-    if security_llm is None:
-        try:
-            security_llm = get_security_llm()
-            security_llm.load_model()
-            app.logger.info("AI model initialized successfully")
-        except Exception as e:
-            app.logger.error(f"Failed to initialize AI model: {e}")
-            security_llm = None
-    return security_llm is not None
+# def init_ai_model():
+#     """Initialize AI model on demand"""
+#     global security_llm
+#     if security_llm is None:
+#         try:
+#             security_llm = get_security_llm()
+#             security_llm.load_model()
+#             app.logger.info("AI model initialized successfully")
+#         except Exception as e:
+#             app.logger.error(f"Failed to initialize AI model: {e}")
+#             security_llm = None
+#     return security_llm is not None
 
-@app.route('/ai/analyze/file', methods=['POST'])
-def ai_analyze_file():
-    """AI-powered file analysis endpoint"""
-    if not init_ai_model():
-        return jsonify({
-            'success': False,
-            'error': 'AI model not available'
-        }), 503
+# @app.route('/ai/analyze/file', methods=['POST'])
+# def ai_analyze_file():
+#     """AI-powered file analysis endpoint"""
+#     if not init_ai_model():
+#         return jsonify({
+#             'success': False,
+#             'error': 'AI model not available'
+#         }), 503
 
-    try:
-        file = request.files.get('file')
-        if not file:
-            return jsonify({'success': False, 'error': 'No file provided'}), 400
+#     try:
+#         file = request.files.get('file')
+#         if not file:
+#             return jsonify({'success': False, 'error': 'No file provided'}), 400
 
-        # Save file temporarily
-        filename = file.filename
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
+#         # Save file temporarily
+#         filename = file.filename
+#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#         file.save(file_path)
 
-        # Get file info
-        file_info = {
-            'filename': filename,
-            'size': os.path.getsize(file_path),
-            'type': file.content_type
-        }
+#         # Get file info
+#         file_info = {
+#             'filename': filename,
+#             'size': os.path.getsize(file_path),
+#             'type': file.content_type
+#         }
 
-        # Read first 1KB for analysis
-        with open(file_path, 'rb') as f:
-            content_preview = f.read(1024).hex()
+#         # Read first 1KB for analysis
+#         with open(file_path, 'rb') as f:
+#             content_preview = f.read(1024).hex()
 
-        # Perform AI analysis
-        analysis = security_llm.analyze_malware(file_info, content_preview)
+#         # Perform AI analysis
+#         analysis = security_llm.analyze_malware(file_info, content_preview)
 
-        # Clean up
-        os.remove(file_path)
+#         # Clean up
+#         os.remove(file_path)
 
-        return jsonify({
-            'success': True,
-            'filename': filename,
-            'ai_analysis': analysis
-        })
+#         return jsonify({
+#             'success': True,
+#             'filename': filename,
+#             'ai_analysis': analysis
+#         })
 
-    except Exception as e:
-        app.logger.error(f"AI analysis error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+#     except Exception as e:
+#         app.logger.error(f"AI analysis error: {e}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/ai/analyze/pcap', methods=['POST'])
-def ai_analyze_pcap():
-    """AI-powered PCAP analysis"""
-    if not init_ai_model():
-        return jsonify({
-            'success': False,
-            'error': 'AI model not available'
-        }), 503
+# @app.route('/ai/analyze/pcap', methods=['POST'])
+# def ai_analyze_pcap():
+#     """AI-powered PCAP analysis"""
+#     if not init_ai_model():
+#         return jsonify({
+#             'success': False,
+#             'error': 'AI model not available'
+#         }), 503
 
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
+#     try:
+#         data = request.get_json()
+#         if not data:
+#             return jsonify({'success': False, 'error': 'No data provided'}), 400
 
-        pcap_info = data.get('pcap_info', {})
-        packet_summary = data.get('packet_summary', '')
+#         pcap_info = data.get('pcap_info', {})
+#         packet_summary = data.get('packet_summary', '')
 
-        # Perform AI analysis
-        analysis = security_llm.analyze_pcap(pcap_info, packet_summary)
+#         # Perform AI analysis
+#         analysis = security_llm.analyze_pcap(pcap_info, packet_summary)
 
-        return jsonify({
-            'success': True,
-            'analysis': analysis
-        })
+#         return jsonify({
+#             'success': True,
+#             'analysis': analysis
+#         })
 
-    except Exception as e:
-        app.logger.error(f"PCAP AI analysis error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+#     except Exception as e:
+#         app.logger.error(f"PCAP AI analysis error: {e}")
+#         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/ai/status')
-def ai_status():
-    """Check AI model status"""
-    is_available = init_ai_model()
+# @app.route('/ai/status')
+# def ai_status():
+#     """Check AI model status"""
+#     is_available = init_ai_model()
 
-    return jsonify({
-        'ai_available': is_available,
-        'device': 'cuda' if torch.cuda.is_available() else 'cpu' if is_available else 'none',
-        'model': 'Foundation-Sec-8B-Instruct' if is_available else 'not loaded'
-    })
+#     return jsonify({
+#         'ai_available': is_available,
+#         'device': 'cuda' if torch.cuda.is_available() else 'cpu' if is_available else 'none',
+#         'model': 'Foundation-Sec-8B-Instruct' if is_available else 'not loaded'
+#     })
 
-# Add AI tab to your existing routes
-@app.route('/ai-dashboard')
-def ai_dashboard():
-    """AI Analysis Dashboard"""
-    return render_template('ai_dashboard.html',
-                         ai_available=security_llm is not None)
+# # Add AI tab to your existing routes
+# @app.route('/ai-dashboard')
+# def ai_dashboard():
+#     """AI Analysis Dashboard"""
+#     return render_template('ai_dashboard.html',
+#                          ai_available=security_llm is not None)
 
 
 

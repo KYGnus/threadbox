@@ -355,23 +355,6 @@
         <div class="row">
           <!-- File Upload Section -->
           <div class="col-lg-6 mb-4">
-            <div class="card text-white">
-              <div class="alert alert-dark mb-3">
-                <i class="fas fa-upload me-2"></i> File Analysis
-              </div>
-              <div class="card-body">
-                <form id="uploadForm" enctype="multipart/form-data">
-                  <div class="mb-3">
-                    <label for="iocFile" class="form-label">Upload file for advanced IOC scanning</label>
-                    <input class="form-control" type="file" id="iocFile" name="file" required>
-                    <div class="form-text">Max file size: 100MB. Supported formats: EXE, DLL, PDF, DOCX, etc.</div>
-                  </div>
-                  <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search me-2"></i> Scan File
-                  </button>
-                </form>
-              </div>
-            </div>
             
             <div class="card mt-4 d-none" id="uploadResultsCard">
               <div class="alert alert-dark mb-3">
@@ -383,7 +366,7 @@
             </div>
           </div>
 
-          <div class="col-lg-6 mb-4">
+          <div class="col-lg-12 mb-4">
             <div class="card text-white">
               <div class="alert alert-dark mb-3">
                 <i class="fas fa-project-diagram me-2"></i> CFG Analysis
