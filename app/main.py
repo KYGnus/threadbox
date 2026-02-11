@@ -41,12 +41,18 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict, Counter
 import json
+from collections import Counter
+import uuid
 from datetime import datetime
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import base64
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+from androguard.misc import AnalyzeAPK
+from collections import Counter
 from scapy.all import *
 from scapy.layers.http import HTTPRequest
 import warnings
@@ -57,6 +63,14 @@ warnings.filterwarnings("ignore")
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY  # Change this to a strong secret key
 
+
+MODEL_NAME = "Hachirou18/NyerAndroidMalware"
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+model.eval()
+
+
+
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -66,11 +80,15 @@ login_manager.login_view = 'login'
 ADMIN_USERNAME = config.USERNAME
 ADMIN_PASSWORD_HASH = generate_password_hash(f'{config.PASSWORD}')  # Change this password
 # Add to your config.py or in the main file
-IOC_RULES_DIR = './ioc_rules'  # Directory for YARA rules
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx', 'xls', 'md', 'conf',
-                    'xlsx', 'ppt', 'pptx', 'exe', 'dll', 'js', 'config',
-                    'vbs', 'ps1', 'zip', 'rar', '7z',
-                    'jpg', 'jpeg', 'png', 'jfif', 'heic', 'pcap', 'pcapng'}
+
+ALLOWED_EXTENSIONS = {
+    'txt', 'pdf', 'doc', 'docx', 'xls', 'md', 'conf',
+    'xlsx', 'ppt', 'pptx', 'exe', 'dll', 'js', 'config',
+    'vbs', 'ps1', 'zip', 'rar', '7z', 'apk',
+    'jpg', 'jpeg', 'png', 'jfif', 'heic', 'pcap', 'pcapng',
+    'php', 'asp', 'aspx', 'jsp', 'py', 'rb', 'pl', 'sh', 'bat', 'cmd',
+    'elf', 'bin', 'deb', 'rpm', 'iso', 'img'
+}
 
 
 def allowed_file(filename):
@@ -84,9 +102,38 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB max file size
 clamNETApp = os.path.join(config.MAINDIR)  # main path
 os.makedirs(clamNETApp, exist_ok=True)
 
-UPLOADS = os.path.join(config.UPLOADDIR)  # main path
+SCAN_RESULTS_FOLDER = os.path.join(config.SCAN_RESULTS)  # main path
+os.makedirs(SCAN_RESULTS_FOLDER, exist_ok=True)
+
+UPLOADS = os.path.join(config.UPLOADDIR)  
 os.makedirs(UPLOADS, exist_ok=True)
 
+IOC_RULES_DIR  = os.path.join(config.IOC_RULES)  
+os.makedirs(IOC_RULES_DIR, exist_ok=True)
+
+
+YARA_RULES_DIR  = os.path.join(config.YARA_RULES)  
+os.makedirs(YARA_RULES_DIR, exist_ok=True)
+
+
+MALDET_TEMP_DIR = os.path.join(config.MALDET)  
+os.makedirs(MALDET_TEMP_DIR, exist_ok=True)
+
+
+
+def get_lan_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+    except:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+def get_os():
+    return platform.system()
 
 class User(UserMixin):
     def __init__(self, id):
@@ -1415,241 +1462,519 @@ def index():
 
 
 
-@app.route('/scan')
-@login_required
-def scan_page():
-    return render_template(
-        'scan.html',
-        os=get_os(),
-        ip=get_lan_ip(),
-        time=datetime.now().strftime("%H:%M:%S")
-    )
-
-
-@app.route('/install')
-@login_required
-def install_page():
-    return render_template(
-        'install.html',
-        os=get_os(),
-        ip=get_lan_ip(),
-        time=datetime.now().strftime("%H:%M:%S")
-    )
-
-@app.route('/network-scan')
-@login_required
-def network_scan_page():
-    return render_template(
-        'network_scan.html',
-        os=get_os(),
-        ip=get_lan_ip(),
-        time=datetime.now().strftime("%H:%M:%S")
-    )
-# Add the scan endpoint with login protection
-@app.route('/perform-scan')
-@login_required
-def scan():
-    path = request.args.get("scan_path")
-    path = unquote(path) if path else None
-    print(f"Decoded scan path: {path}")
-    remote_host = request.args.get("remote_host")
-    username = request.args.get("remote_user")
-    password = request.args.get("remote_pass")
-    port = request.args.get("remote_port", "22")
-
-    def generate():
-        yield "data: 🔄 Starting scan...\n\n"
-        try:
-            if remote_host:
-                # Validate port
-                try:
-                    port_num = int(port)
-                    if not 1 <= port_num <= 65535:
-                        raise ValueError("Port out of range")
-                except ValueError as e:
-                    yield f"data: ❌ Invalid port number: {str(e)}\n\n"
-                    return
-                
-                # SSH mode
-                yield f"data: 🔗 Connecting to remote host {remote_host}:{port}...\n\n"
-                try:
-                    # Get the remote OS and command output
-                    remote_os, stdout, stderr = ssh_scan(remote_host, username, password, path, port=port_num)
-                    yield f"data: 💻 Remote OS: {remote_os}\n\n"
-                    
-                    # Check if stdout is a string (already decoded) or bytes
-                    if isinstance(stdout, str):
-                        # If it's already a string, just yield it line by line
-                        for line in stdout.splitlines():
-                            yield f"data: {line}\n\n"
-                    else:
-                        # If it's bytes, decode it properly
-                        start_time = time.time()
-                        timeout = 300  # 5 minutes timeout
-                        
-                        while True:
-                            line = stdout.readline()
-                            if line:
-                                try:
-                                    # Check if line is bytes or string
-                                    if isinstance(line, bytes):
-                                        decoded_line = line.decode('utf-8', errors='replace').strip()
-                                    else:
-                                        decoded_line = line.strip()
-                                    yield f"data: {decoded_line}\n\n"
-                                except UnicodeDecodeError:
-                                    yield "data: [binary data]\n\n"
-                            elif time.time() - start_time > timeout:
-                                yield "data: ⏰ Timeout waiting for scan output\n\n"
-                                break
-                            elif stdout.channel.exit_status_ready():
-                                break
-                            else:
-                                time.sleep(0.1)
-                    
-                    yield "data: ✅ Remote scan finished.\n\n"
-                except paramiko.AuthenticationException:
-                    yield "data: ❌ Authentication failed\n\n"
-                except paramiko.SSHException as e:
-                    yield f"data: ❌ SSH error: {str(e)}\n\n"
-                except socket.timeout:
-                    yield "data: ❌ Connection timed out\n\n"
-                except Exception as e:
-                    yield f"data: ❌ Error: {str(e)}\n\n"
-            else:
-                # Local scan
-                yield "data: 🔍 Starting local scan...\n\n"
-                try:
-                    process = subprocess.Popen(
-                        build_command(path), 
-                        stdout=subprocess.PIPE, 
-                        stderr=subprocess.STDOUT,
-                        bufsize=1,
-                        universal_newlines=True  # This ensures text mode, not bytes
-                    )
-                    
-                    for line in iter(process.stdout.readline, ''):  # Empty string indicates EOF
-                        yield f"data: {line.strip()}\n\n"
-                        
-                    process.stdout.close()
-                    return_code = process.wait()
-                    
-                    if return_code == 0:
-                        yield "data: ✅ Local scan finished successfully.\n\n"
-                    elif return_code == 1:
-                        yield "data: ⚠️ Local scan found infected files!\n\n"
-                    else:
-                        yield f"data: ⚠️ Local scan finished with return code {return_code}\n\n"
-                except FileNotFoundError:
-                    yield "data: ❌ ClamAV not found. Please install ClamAV first.\n\n"
-                except Exception as e:
-                    yield f"data: ❌ Error during local scan: {str(e)}\n\n"
-        except Exception as e:
-            yield f"data: ❌ Unexpected error: {str(e)}\n\n"
-
-    return Response(generate(), mimetype='text/event-stream')
-
-# Enhanced install endpoint with better error handling
-@app.route('/perform-install', methods=['POST'])
-@login_required
-def install():
-    hosts = [h.strip() for h in request.form.get("install_hosts", "").split(',') if h.strip()]
-    username = request.form.get("install_user", "")
-    password = request.form.get("install_pass", "")
-    port = request.form.get("install_port", "22")
+class ClamAVScanner:
+    """Local ClamAV scanner for uploaded files"""
     
-    def generate():
-        yield "data: 🔧 Starting ClamAV installation on remote hosts...\n\n"
-        if not hosts:
-            yield "data: ❌ No valid hosts provided\n\n"
-            return
-            
+    @staticmethod
+    def is_available():
+        """Check if ClamAV is installed"""
         try:
-            # Validate port
+            if get_os() == "Windows":
+                result = subprocess.run(
+                    ['where', 'clamscan'],
+                    capture_output=True,
+                    text=True
+                )
+            else:
+                result = subprocess.run(
+                    ['which', 'clamscan'],
+                    capture_output=True,
+                    text=True
+                )
+            return result.returncode == 0
+        except:
+            return False
+    
+    @staticmethod
+    def scan_file(file_path):
+        """Scan a single file with ClamAV"""
+        results = {
+            'detected': False,
+            'virus_name': None,
+            'output': '',
+            'error': None
+        }
+        
+        try:
+            if get_os() == "Windows":
+                clam_path = r"C:\Program Files\ClamAV\clamscan.exe"
+                if not os.path.exists(clam_path):
+                    clam_path = r"C:\Program Files (x86)\ClamAV\clamscan.exe"
+                cmd = [clam_path, '--no-summary', '--infected', file_path]
+            else:
+                cmd = ['clamscan', '--no-summary', '--infected', file_path]
+            
+            process = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            results['output'] = process.stdout + process.stderr
+            
+            # Check for infections (clamscan returns 1 when virus found)
+            if process.returncode == 1:
+                results['detected'] = True
+                # Parse virus name from output
+                for line in process.stdout.split('\n'):
+                    if ': ' in line and 'FOUND' in line:
+                        parts = line.split(': ')
+                        if len(parts) > 1:
+                            virus_info = parts[1].split(' FOUND')[0]
+                            results['virus_name'] = virus_info
+                            break
+            
+        except subprocess.TimeoutExpired:
+            results['error'] = "Scan timeout exceeded"
+        except FileNotFoundError:
+            results['error'] = "ClamAV not found"
+        except Exception as e:
+            results['error'] = str(e)
+        
+        return results
+    
+    @staticmethod
+    def scan_directory(directory_path):
+        """Scan a directory recursively with ClamAV"""
+        results = {
+            'detected': False,
+            'infected_files': [],
+            'total_files': 0,
+            'error': None
+        }
+        
+        try:
+            if get_os() == "Windows":
+                clam_path = r"C:\Program Files\ClamAV\clamscan.exe"
+                if not os.path.exists(clam_path):
+                    clam_path = r"C:\Program Files (x86)\ClamAV\clamscan.exe"
+                cmd = [clam_path, '--recursive', '--no-summary', '--infected', directory_path]
+            else:
+                cmd = ['clamscan', '--recursive', '--no-summary', '--infected', directory_path]
+            
+            process = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            
+            output = process.stdout + process.stderr
+            
+            # Parse infected files
+            for line in output.split('\n'):
+                if ': ' in line and 'FOUND' in line:
+                    parts = line.split(': ')
+                    if len(parts) > 1:
+                        file_path = parts[0]
+                        virus_info = parts[1].split(' FOUND')[0]
+                        results['infected_files'].append({
+                            'file': os.path.basename(file_path),
+                            'path': file_path,
+                            'virus': virus_info
+                        })
+            
+            results['detected'] = len(results['infected_files']) > 0
+            results['total_files'] = len([f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))])
+            
+        except Exception as e:
+            results['error'] = str(e)
+        
+        return results
+
+class MaldetScanner:
+    """Linux Maldet (Linux Malware Detect) scanner"""
+    
+    @staticmethod
+    def is_available():
+        """Check if Maldet is installed (Linux only)"""
+        if get_os() != "Linux":
+            return False
+        try:
+            result = subprocess.run(
+                ['which', 'maldet'],
+                capture_output=True,
+                text=True
+            )
+            return result.returncode == 0
+        except:
+            return False
+    
+    @staticmethod
+    def scan_file(file_path):
+        """Scan a file with Maldet"""
+        results = {
+            'detected': False,
+            'malware_name': None,
+            'output': '',
+            'error': None
+        }
+        
+        if get_os() != "Linux":
+            results['error'] = "Maldet is only available on Linux"
+            return results
+        
+        try:
+            # Copy file to maldet temp directory
+            temp_file = os.path.join(MALDET_TEMP_DIR, os.path.basename(file_path))
+            import shutil
+            shutil.copy2(file_path, temp_file)
+            
+            # Scan with maldet
+            cmd = ['maldet', '--scan-all', temp_file]
+            process = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            results['output'] = process.stdout + process.stderr
+            
+            # Check for detections
+            if "malware found" in process.stdout.lower():
+                results['detected'] = True
+                # Parse malware name
+                for line in process.stdout.split('\n'):
+                    if "infected:" in line.lower() or "malware:" in line.lower():
+                        results['malware_name'] = line.strip()
+                        break
+            
+            # Cleanup
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            
+        except Exception as e:
+            results['error'] = str(e)
+        
+        return results
+
+class YaraScanner:
+    """YARA rules scanner"""
+    
+    def __init__(self):
+        self.rules = self._load_rules()
+    
+    def _load_rules(self):
+        """Load all YARA rules from rules directory"""
+        rules = {}
+        if not os.path.exists(YARA_RULES_DIR):
+            return rules
+        
+        for rule_file in os.listdir(YARA_RULES_DIR):
+            if rule_file.endswith(('.yar', '.yara')):
+                try:
+                    rule_path = os.path.join(YARA_RULES_DIR, rule_file)
+                    rules[rule_file] = yara.compile(filepath=rule_path)
+                except Exception as e:
+                    print(f"Error loading YARA rule {rule_file}: {e}")
+        
+        return rules
+    
+    def scan_file(self, file_path):
+        """Scan a file with all loaded YARA rules"""
+        results = {
+            'matches': [],
+            'total_rules': len(self.rules),
+            'matched_rules': 0
+        }
+        
+        for rule_name, rule in self.rules.items():
             try:
-                port_num = int(port)
-                if not 1 <= port_num <= 65535:
-                    raise ValueError("Port out of range")
-            except ValueError as e:
-                yield f"data: ❌ Invalid port number: {str(e)}\n\n"
-                return
-                
-            yield f"data: ⚙️ Attempting to install on {len(hosts)} hosts using port {port}...\n\n"
-            yield "data: ⏳ This may take several minutes...\n\n"
-            
-            # Process hosts in parallel with ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=3) as executor:  # Reduced workers to avoid overloading
-                future_to_host = {
-                    executor.submit(
-                        install_on_single_host_with_retry,
-                        host,
-                        username,
-                        password,
-                        port_num
-                    ): host for host in hosts
-                }
-                
-                for future in as_completed(future_to_host):
-                    host = future_to_host[future]
-                    try:
-                        success, message = future.result()
-                        status = "✅" if success else "❌"
-                        for line in message.split('\n'):
-                            if line.strip():
-                                yield f"data: {status} {host}: {line.strip()}\n\n"
-                    except Exception as e:
-                        yield f"data: ❌ {host} failed: {str(e)}\n\n"
-                        continue
-                    
-            yield "data: 🏁 Installation process completed\n\n"
-        except Exception as e:
-            yield f"data: ❌ Global installation error: {str(e)}\n\n"
-
-    return Response(generate(), mimetype='text/event-stream')
-
-def install_on_single_host_with_retry(host, username, password, port):
-    """Helper function with retry mechanism for package manager locks"""
-    max_retries = 3
-    retry_delay = 30  # seconds
+                matches = rule.match(file_path)
+                if matches:
+                    for match in matches:
+                        results['matches'].append({
+                            'rule': rule_name,
+                            'rule_name': match.rule,
+                            'tags': match.tags,
+                            'meta': match.meta,
+                            'strings': [str(s) for s in match.strings[:5]]  # Limit to 5 strings
+                        })
+                    results['matched_rules'] += len(matches)
+            except Exception as e:
+                continue
+        
+        return results
     
-    for attempt in range(max_retries):
+    @staticmethod
+    def download_sample_rules():
+        """Download sample YARA rules for common malware families"""
+        sample_rules = {
+            'webshell.yar': '''
+rule Webshell_Base64 {
+    meta:
+        description = "Detects base64 encoded strings commonly found in webshells"
+        author = "clamNET"
+        severity = "high"
+    strings:
+        $base64 = /[A-Za-z0-9+\/]{40,}={0,2}/
+        $eval = "eval(" nocase
+        $system = "system(" nocase
+        $exec = "exec(" nocase
+        $passthru = "passthru(" nocase
+        $shell_exec = "shell_exec(" nocase
+    condition:
+        $eval or $system or $exec or $passthru or $shell_exec or #base64 > 5
+}
+
+rule Suspicious_Strings {
+    meta:
+        description = "Detects suspicious strings commonly found in malware"
+        author = "clamNET"
+        severity = "medium"
+    strings:
+        $cmd = "cmd.exe" nocase
+        $powershell = "powershell" nocase
+        $wscript = "wscript" nocase
+        $cscript = "cscript" nocase
+        $regedit = "regedit" nocase
+        $taskkill = "taskkill" nocase
+    condition:
+        any of them
+}
+''',
+            'malware_generic.yar': '''
+rule Malware_Generic_Packer {
+    meta:
+        description = "Detects generic packer signatures"
+        author = "clamNET"
+        severity = "medium"
+    strings:
+        $upx0 = "UPX0"
+        $upx1 = "UPX1"
+        $upx2 = "UPX!"
+        $aspack = "Aspack"
+        $petite = "Petite"
+        $mew = "MEW"
+    condition:
+        any of them
+}
+
+rule Anti_Debugging {
+    meta:
+        description = "Detects anti-debugging techniques"
+        author = "clamNET"
+        severity = "high"
+    strings:
+        $ptrace = "ptrace" nocase
+        $isdebuggerpresent = "IsDebuggerPresent" nocase
+        $checkremotedebugger = "CheckRemoteDebuggerPresent" nocase
+        $ntqueryinfo = "NtQueryInformationProcess" nocase
+    condition:
+        any of them
+}
+'''
+        }
+        
+        for rule_name, rule_content in sample_rules.items():
+            rule_path = os.path.join(YARA_RULES_DIR, rule_name)
+            if not os.path.exists(rule_path):
+                with open(rule_path, 'w') as f:
+                    f.write(rule_content)
+                print(f"✅ Created sample YARA rule: {rule_name}")
+
+class ComprehensiveFileScanner:
+    """Comprehensive scanner that uses ClamAV, Maldet, and YARA"""
+    
+    def __init__(self):
+        self.clamav_available = ClamAVScanner.is_available()
+        self.maldet_available = MaldetScanner.is_available()
+        self.yara_scanner = YaraScanner()
+        
+        # Download sample YARA rules if none exist
+        if len(self.yara_scanner.rules) == 0:
+            YaraScanner.download_sample_rules()
+            self.yara_scanner = YaraScanner()
+    
+    def scan_file(self, file_path):
+        """Scan a file with all available scanners"""
+        results = {
+            'file_info': self._get_file_info(file_path),
+            'clamav': None,
+            'maldet': None,
+            'yara': None,
+            'detections': [],
+            'threat_score': 0,
+            'verdict': 'CLEAN',
+            'scan_timestamp': datetime.now().isoformat()
+        }
+        
+        # ClamAV scan
+        if self.clamav_available:
+            clamav_results = ClamAVScanner.scan_file(file_path)
+            results['clamav'] = clamav_results
+            if clamav_results['detected']:
+                results['detections'].append({
+                    'scanner': 'ClamAV',
+                    'threat': clamav_results['virus_name'],
+                    'severity': 'high'
+                })
+                results['threat_score'] += 30
+        
+        # Maldet scan (Linux only)
+        if self.maldet_available:
+            maldet_results = MaldetScanner.scan_file(file_path)
+            results['maldet'] = maldet_results
+            if maldet_results['detected']:
+                results['detections'].append({
+                    'scanner': 'Maldet',
+                    'threat': maldet_results['malware_name'],
+                    'severity': 'high'
+                })
+                results['threat_score'] += 30
+        
+        # YARA scan
+        yara_results = self.yara_scanner.scan_file(file_path)
+        results['yara'] = yara_results
+        for match in yara_results['matches']:
+            severity = match['meta'].get('severity', 'medium').lower()
+            points = 20 if severity == 'high' else 10 if severity == 'medium' else 5
+            
+            results['detections'].append({
+                'scanner': 'YARA',
+                'threat': match['rule_name'],
+                'rule': match['rule'],
+                'severity': severity,
+                'points': points
+            })
+            results['threat_score'] += points
+        
+        # Determine verdict
+        if results['threat_score'] >= 50:
+            results['verdict'] = 'HIGHLY_MALICIOUS'
+        elif results['threat_score'] >= 30:
+            results['verdict'] = 'MALICIOUS'
+        elif results['threat_score'] >= 10:
+            results['verdict'] = 'SUSPICIOUS'
+        else:
+            results['verdict'] = 'CLEAN'
+        
+        return results
+    
+    def _get_file_info(self, file_path):
+        """Get basic file information"""
+        file_stats = os.stat(file_path)
+        return {
+            'filename': os.path.basename(file_path),
+            'size': file_stats.st_size,
+            'created': datetime.fromtimestamp(file_stats.st_ctime).isoformat(),
+            'modified': datetime.fromtimestamp(file_stats.st_mtime).isoformat(),
+            'file_type': magic.from_file(file_path) if magic else 'Unknown',
+            'md5': self._calculate_hash(file_path, 'md5'),
+            'sha1': self._calculate_hash(file_path, 'sha1'),
+            'sha256': self._calculate_hash(file_path, 'sha256')
+        }
+    
+    def _calculate_hash(self, file_path, algorithm='sha256'):
+        """Calculate file hash"""
+        hash_func = getattr(hashlib, algorithm)()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b''):
+                hash_func.update(chunk)
+        return hash_func.hexdigest()
+
+
+
+@app.route('/file-scan')
+@login_required
+def file_scan_page():
+    """File upload and scan page"""
+    return render_template(
+        'file_scan.html',
+        os=get_os(),
+        ip=get_lan_ip(),
+        clamav_available=ClamAVScanner.is_available(),
+        maldet_available=MaldetScanner.is_available(),
+        time=datetime.now().strftime("%H:%M:%S")
+    )
+
+@app.route('/upload-scan-file', methods=['POST'])
+@login_required
+def upload_scan_file():
+    """Handle file upload and scan with all scanners"""
+    if 'scanfile' not in request.files:
+        flash("❌ No file uploaded", "danger")
+        return redirect(url_for('file_scan_page'))
+    
+    file = request.files['scanfile']
+    if file.filename == '':
+        flash("⚠ No file selected", "warning")
+        return redirect(url_for('file_scan_page'))
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Add timestamp to avoid filename collisions
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{timestamp}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(file_path)
+        
         try:
-            installer = ClamAVInstaller(host, username, password, port=port)
-            success, message = installer.install()
+            # Perform comprehensive scan
+            scanner = ComprehensiveFileScanner()
+            scan_results = scanner.scan_file(file_path)
             
-            if success:
-                return True, message
-            elif "Could not get lock" in message or "Unable to lock" in message:
-                if attempt < max_retries - 1:
-                    wait_time = retry_delay * (attempt + 1)
-                    time.sleep(wait_time)
-                    continue
-                return False, f"Package manager locked after {max_retries} attempts"
-            else:
-                return success, message
-                
-        except paramiko.AuthenticationException:
-            return False, "Authentication failed"
-        except paramiko.SSHException as e:
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay * (attempt + 1))
-                continue
-            return False, f"SSH error: {str(e)}"
-        except socket.timeout:
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay * (attempt + 1))
-                continue
-            return False, "Connection timed out"
+            # Save results to JSON
+            result_filename = f"scan_result_{timestamp}_{uuid.uuid4().hex[:6]}.json"
+            result_path = os.path.join(SCAN_RESULTS_FOLDER, result_filename)
+            
+            with open(result_path, 'w') as f:
+                json.dump(scan_results, f, indent=4, default=str)
+            
+            # Store in session for download
+            session['latest_scan_result'] = result_filename
+            
+            # Clean up uploaded file
+            os.remove(file_path)
+            
+            flash("✅ File scanned successfully!", "success")
+            
+            return render_template(
+                "file_scan_result.html",
+                filename=filename,
+                results=scan_results,
+                result_file=result_filename,
+                os=get_os(),
+                ip=get_lan_ip(),
+                time=datetime.now().strftime("%H:%M:%S")
+            )
+            
         except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay * (attempt + 1))
-                continue
-            return False, f"Error: {str(e)}"
-        finally:
-            if 'installer' in locals() and hasattr(installer, 'ssh') and installer.ssh:
-                installer.ssh.close()
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            flash(f"❌ Error scanning file: {str(e)}", "danger")
+            return redirect(url_for('file_scan_page'))
     
-    return False, "Max retries exceeded"
+    flash("❌ Invalid file type", "danger")
+    return redirect(url_for('file_scan_page'))
+
+@app.route('/download-scan-result')
+@login_required
+def download_scan_result():
+    """Download scan results as JSON"""
+    if 'latest_scan_result' not in session:
+        flash("No scan result available for download", "warning")
+        return redirect(url_for('file_scan_page'))
+    
+    result_filename = session['latest_scan_result']
+    result_path = os.path.join(SCAN_RESULTS_FOLDER, result_filename)
+    
+    if not os.path.exists(result_path):
+        flash("Result file not found", "danger")
+        return redirect(url_for('file_scan_page'))
+    
+    try:
+        return send_file(
+            result_path,
+            as_attachment=True,
+            download_name=f"scan_analysis_{datetime.now().strftime('%Y%m%d')}.json",
+            mimetype='application/json'
+        )
+    except Exception as e:
+        flash(f"Error downloading file: {str(e)}", "danger")
+        return redirect(url_for('file_scan_page'))
 
 
 @app.route('/ioc-scan')
@@ -2299,6 +2624,8 @@ def download_pcap_result():
     except Exception as e:
         flash(f"Error downloading file: {str(e)}", "danger")
         return redirect(url_for('pcap_scan_page'))
+    
+
 @app.route('/perform-pcap-scan', methods=['POST'])
 @login_required
 def perform_pcap_scan():
@@ -2507,6 +2834,36 @@ def download_pepper_result():
 
 
 
+
+
+
+
+
+def extract_apk_features(apk_path):
+    try:
+        a, d, dx = AnalyzeAPK(apk_path)
+        permissions = a.get_permissions()
+        api_calls = [c.get_name() for method in d.get_methods() for c in method.get_xref_to()]
+        features_text = " ".join(permissions + api_calls)
+        return permissions, api_calls, features_text
+    except Exception as e:
+        print(f"Error analyzing APK: {e}")
+        return [], [], ""
+
+# Predict malware
+def predict_malware(features_text):
+    if not features_text:
+        return "Error", 0
+    inputs = tokenizer(features_text, return_tensors="pt", truncation=True, padding=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        probs = torch.softmax(outputs.logits, dim=1)
+        pred = torch.argmax(probs).item()
+        probability = round(probs[0][pred].item() * 100, 2)
+    return "Malware" if pred == 1 else "Benign", probability
+
+
+
 @app.route('/malware-analysis')
 @login_required
 def malware_analysis_page():
@@ -2592,6 +2949,10 @@ def upload_malware_file():
         flash(f"❌ Error analyzing file: {str(e)}", "danger")
         return redirect(url_for('malware_analysis_page'))
 
+
+
+
+
 @app.route('/download-malware-result')
 @login_required
 def download_malware_result():
@@ -2615,6 +2976,8 @@ def download_malware_result():
         )
     except Exception as e:
         flash(f"Error downloading file: {str(e)}", "danger")
+
+        
         return redirect(url_for('malware_analysis_page'))
 
 @app.route('/perform-malware-scan', methods=['POST'])
@@ -2651,113 +3014,77 @@ def perform_malware_scan():
     return Response(generate(), mimetype='text/event-stream')
 
 
-# security_llm = None
 
-# def init_ai_model():
-#     """Initialize AI model on demand"""
-#     global security_llm
-#     if security_llm is None:
-#         try:
-#             security_llm = get_security_llm()
-#             security_llm.load_model()
-#             app.logger.info("AI model initialized successfully")
-#         except Exception as e:
-#             app.logger.error(f"Failed to initialize AI model: {e}")
-#             security_llm = None
-#     return security_llm is not None
 
-# @app.route('/ai/analyze/file', methods=['POST'])
-# def ai_analyze_file():
-#     """AI-powered file analysis endpoint"""
-#     if not init_ai_model():
-#         return jsonify({
-#             'success': False,
-#             'error': 'AI model not available'
-#         }), 503
 
-#     try:
-#         file = request.files.get('file')
-#         if not file:
-#             return jsonify({'success': False, 'error': 'No file provided'}), 400
 
-#         # Save file temporarily
-#         filename = file.filename
-#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-#         file.save(file_path)
 
-#         # Get file info
-#         file_info = {
-#             'filename': filename,
-#             'size': os.path.getsize(file_path),
-#             'type': file.content_type
-#         }
 
-#         # Read first 1KB for analysis
-#         with open(file_path, 'rb') as f:
-#             content_preview = f.read(1024).hex()
+@app.route('/android-analysis', methods=['GET', 'POST'])
+@login_required
+def android_analysis():
+    if request.method == 'POST':
+        if 'apkfile' not in request.files:
+            flash("❌ No file uploaded", "danger")
+            return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
+        
+        file = request.files['apkfile']
+        if file.filename == '':
+            flash("⚠ No file selected", "warning")
+            return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
 
-#         # Perform AI analysis
-#         analysis = security_llm.analyze_malware(file_info, content_preview)
+        # Check file size
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        if file_size > MAX_FILE_SIZE:
+            flash("❌ File size exceeds maximum allowed", "danger")
+            return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
 
-#         # Clean up
-#         os.remove(file_path)
+        if allowed_file(file.filename) and file.filename.lower().endswith('.apk'):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOADS, filename)
+            file.save(file_path)
 
-#         return jsonify({
-#             'success': True,
-#             'filename': filename,
-#             'ai_analysis': analysis
-#         })
+            try:
+                # Extract features
+                permissions, api_calls, features_text = extract_apk_features(file_path)
 
-#     except Exception as e:
-#         app.logger.error(f"AI analysis error: {e}")
-#         return jsonify({'success': False, 'error': str(e)}), 500
+                # Predict malware
+                result, probability = predict_malware(features_text)
 
-# @app.route('/ai/analyze/pcap', methods=['POST'])
-# def ai_analyze_pcap():
-#     """AI-powered PCAP analysis"""
-#     if not init_ai_model():
-#         return jsonify({
-#             'success': False,
-#             'error': 'AI model not available'
-#         }), 503
+                # Top 20 API calls
+                top_apis = [api for api, _ in Counter(api_calls).most_common(20)]
 
-#     try:
-#         data = request.get_json()
-#         if not data:
-#             return jsonify({'success': False, 'error': 'No data provided'}), 400
+                # Clean up uploaded file
+                os.remove(file_path)
 
-#         pcap_info = data.get('pcap_info', {})
-#         packet_summary = data.get('packet_summary', '')
+                # Render the report directly
+                return render_template(
+                    "android_report.html",
+                    filename=filename,
+                    result=result,
+                    probability=probability,
+                    permissions=permissions,
+                    api_calls=top_apis,
+                    total_permissions=len(permissions),
+                    total_api_calls=len(api_calls),
+                    os=get_os(),
+                    ip=get_lan_ip(),
+                    time=datetime.now().strftime("%H:%M:%S")
+                )
 
-#         # Perform AI analysis
-#         analysis = security_llm.analyze_pcap(pcap_info, packet_summary)
+            except Exception as e:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                flash(f"❌ Error analyzing APK: {str(e)}", "danger")
+                return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
 
-#         return jsonify({
-#             'success': True,
-#             'analysis': analysis
-#         })
+        flash("❌ Invalid file type. Please upload an .apk file.", "danger")
+        return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
 
-#     except Exception as e:
-#         app.logger.error(f"PCAP AI analysis error: {e}")
-#         return jsonify({'success': False, 'error': str(e)}), 500
-
-# @app.route('/ai/status')
-# def ai_status():
-#     """Check AI model status"""
-#     is_available = init_ai_model()
-
-#     return jsonify({
-#         'ai_available': is_available,
-#         'device': 'cuda' if torch.cuda.is_available() else 'cpu' if is_available else 'none',
-#         'model': 'Foundation-Sec-8B-Instruct' if is_available else 'not loaded'
-#     })
-
-# # Add AI tab to your existing routes
-# @app.route('/ai-dashboard')
-# def ai_dashboard():
-#     """AI Analysis Dashboard"""
-#     return render_template('ai_dashboard.html',
-#                          ai_available=security_llm is not None)
+    # GET request -> just render upload page
+    return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
 
 
 

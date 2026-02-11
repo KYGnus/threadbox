@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>File Scan Results - clamNET</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- FontAwesome -->
+  <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+
+  <style>
+    body {
+      background-image: url(../static/GIF-Cybersecurity-Lockv2.gif);
+      background-size: cover;
+      font-family: "Red Hat Text", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: #ffffff;
+      padding: 40px 0;
+      min-height: 100vh;
+    }
+
+    main.p-4 {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 25px;
+    }
+
+    .card-header {
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .verdict-badge {
+      font-size: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      display: inline-block;
+    }
+
+    .verdict-clean {
+      background: linear-gradient(45deg, #28a745, #20c997);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .verdict-suspicious {
+      background: linear-gradient(45deg, #ffc107, #fd7e14);
+      color: #000;
+    }
+
+    .verdict-malicious {
+      background: linear-gradient(45deg, #dc3545, #bd2130);
+      color: #fff;
+    }
+
+    .verdict-highly-malicious {
+      background: linear-gradient(45deg, #6f0000, #b30000);
+      color: #fff;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+
+    .score-display {
+      font-size: 3rem;
+      font-weight: bold;
+    }
+
+    .detection-item {
+      border-left: 5px solid;
+      padding: 12px 18px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .detection-high {
+      border-left-color: #dc3545;
+      background: rgba(220, 53, 69, 0.1);
+    }
+
+    .detection-medium {
+      border-left-color: #ffc107;
+      background: rgba(255, 193, 7, 0.1);
+    }
+
+    .detection-low {
+      border-left-color: #28a745;
+      background: rgba(40, 167, 69, 0.1);
+    }
+
+    .scanner-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .hash-value {
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+      color: #00ff88;
+      font-size: 0.9rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, #00ffff, #008080);
+      border: none;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(45deg, #00d5d5, #006666);
+    }
+
+    .btn-outline-info {
+      color: #00ffff;
+      border-color: #00ffff;
+    }
+
+    .btn-outline-info:hover {
+      background-color: #00ffff;
+      color: #000;
+    }
+
+    .analysis-container {
+      max-height: 500px;
+      overflow-y: auto;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .progress {
+      background-color: #333;
+      height: 20px;
+      border-radius: 10px;
+    }
+
+    .progress-bar {
+      border-radius: 10px;
+    }
+
+    .status-icon {
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 style="color:white;">
+        <i class="fas fa-file-shield"></i> File Scan Results
+      </h1>
+      <img src="../static/ClamAV.svg" alt="ClamNET Logo" height="60" />
+    </div>
+
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-4 bg-transparent px-0">
+        <li class="breadcrumb-item"><a href="/" class="text-white">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/file-scan" class="text-white">File Scanner</a></li>
+        <li class="breadcrumb-item active text-white">Results</li>
+      </ol>
+    </nav>
+
+    <!-- Verdict Summary -->
+    <div class="card text-center">
+      <div class="card-body">
+        {% if results.verdict == 'CLEAN' %}
+        <span class="verdict-badge verdict-clean">
+          <i class="fas fa-check-circle"></i> CLEAN
+        </span>
+        {% elif results.verdict == 'SUSPICIOUS' %}
+        <span class="verdict-badge verdict-suspicious">
+          <i class="fas fa-exclamation-triangle"></i> SUSPICIOUS
+        </span>
+        {% elif results.verdict == 'MALICIOUS' %}
+        <span class="verdict-badge verdict-malicious">
+          <i class="fas fa-skull-crossbones"></i> MALICIOUS
+        </span>
+        {% elif results.verdict == 'HIGHLY_MALICIOUS' %}
+        <span class="verdict-badge verdict-highly-malicious">
+          <i class="fas fa-radiation"></i> HIGHLY MALICIOUS
+        </span>
+        {% endif %}
+
+        <div class="score-display mt-3 " style="color: white;">
+          {{ results.threat_score }} pts
+        </div>
+
+        <p class="mt-3" style="color: white;">
+          <strong>File:</strong> {{ filename }}<br>
+          <strong>Scan Time:</strong> {{ results.scan_timestamp }}<br>
+          <strong>Detections:</strong> {{ results.detections|length }}
+        </p>
+
+        <div class="mt-4">
+          <a href="{{ url_for('download_scan_result') }}" class="btn btn-outline-info me-2">
+            <i class="fas fa-download"></i> Download JSON Report
+          </a>
+          <a href="{{ url_for('file_scan_page') }}" class="btn btn-primary">
+            <i class="fas fa-redo"></i> New Scan
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Information -->
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-info-circle"></i> File Information
+          </div>
+          <div class="card-body">
+            <table class="table table-dark table-sm">
+              <tr>
+                <th>Filename:</th>
+                <td>{{ results.file_info.filename }}</td>
+              </tr>
+              <tr>
+                <th>Size:</th>
+                <td>{{ results.file_info.size|humanize_bytes }}</td>
+              </tr>
+              <tr>
+                <th>Type:</th>
+                <td>{{ results.file_info.file_type }}</td>
+              </tr>
+              <tr>
+                <th>Created:</th>
+                <td>{{ results.file_info.created }}</td>
+              </tr>
+              <tr>
+                <th>Modified:</th>
+                <td>{{ results.file_info.modified }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-fingerprint"></i> File Hashes
+          </div>
+          <div class="card-body">
+            <table class="table table-dark table-sm">
+              <tr>
+                <th>MD5:</th>
+                <td class="hash-value">{{ results.file_info.md5 }}</td>
+              </tr>
+              <tr>
+                <th>SHA1:</th>
+                <td class="hash-value">{{ results.file_info.sha1 }}</td>
+              </tr>
+              <tr>
+                <th>SHA256:</th>
+                <td class="hash-value">{{ results.file_info.sha256 }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scanner Status -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-shield-alt"></i> Scanner Results
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <!-- ClamAV -->
+          <div class="col-md-4 mb-3">
+            <div class="p-3 bg-dark rounded">
+              <h5 style="color:white;">
+                <i class="fas fa-virus"></i> ClamAV
+                {% if results.clamav %}
+                  {% if results.clamav.detected %}
+                    <span class="badge bg-danger float-end">DETECTED</span>
+                  {% elif results.clamav.error %}
+                    <span class="badge bg-warning float-end">ERROR</span>
+                  {% else %}
+                    <span class="badge bg-success float-end">CLEAN</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-secondary float-end">NOT AVAILABLE</span>
+                {% endif %}
+              </h5>
+              {% if results.clamav %}
+                {% if results.clamav.virus_name %}
+                  <p class="mb-0 mt-2 text-danger">
+                    <strong>Virus:</strong> {{ results.clamav.virus_name }}
+                  </p>
+                {% endif %}
+                {% if results.clamav.error %}
+                  <p class="mb-0 mt-2 text-warning">
+                    {{ results.clamav.error }}
+                  </p>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Maldet -->
+          <div class="col-md-4 mb-3">
+            <div class="p-3 bg-dark rounded">
+              <h5 style="color:white;">
+                <i class="fas fa-shield"></i> Maldet
+                {% if results.maldet %}
+                  {% if results.maldet.detected %}
+                    <span class="badge bg-danger float-end">DETECTED</span>
+                  {% elif results.maldet.error %}
+                    <span class="badge bg-warning float-end">ERROR</span>
+                  {% else %}
+                    <span class="badge bg-success float-end">CLEAN</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-secondary float-end">NOT AVAILABLE</span>
+                {% endif %}
+              </h5>
+              {% if results.maldet %}
+                {% if results.maldet.malware_name %}
+                  <p class="mb-0 mt-2 text-danger">
+                    <strong>Malware:</strong> {{ results.maldet.malware_name }}
+                  </p>
+                {% endif %}
+                {% if results.maldet.error %}
+                  <p class="mb-0 mt-2 text-warning">
+                    {{ results.maldet.error }}
+                  </p>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- YARA -->
+          <div class="col-md-4 mb-3">
+            <div class="p-3 bg-dark rounded">
+              <h5 style="color:white;">
+                <i class="fas fa-file-code"></i> YARA
+                {% if results.yara.matched_rules > 0 %}
+                  <span class="badge bg-danger float-end">{{ results.yara.matched_rules }} MATCHES</span>
+                {% else %}
+                  <span class="badge bg-success float-end">CLEAN</span>
+                {% endif %}
+              </h5>
+              <p class="mb-0 mt-2">
+                <strong>Rules:</strong> {{ results.yara.matched_rules }}/{{ results.yara.total_rules }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detections -->
+    {% if results.detections %}
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-exclamation-triangle"></i> Detections ({{ results.detections|length }})
+      </div>
+      <div class="card-body analysis-container">
+        {% for detection in results.detections %}
+        <div class="detection-item detection-{{ detection.severity }}">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ detection.scanner }}:</strong>
+              {% if detection.threat %}
+                <span class="text-danger">{{ detection.threat }}</span>
+              {% elif detection.rule %}
+                <span class="text-warning">{{ detection.rule }}</span>
+              {% endif %}
+            </div>
+            <span class="badge {% if detection.severity == 'high' %}bg-danger{% elif detection.severity == 'medium' %}bg-warning{% else %}bg-success{% endif %}">
+              {{ detection.severity|upper }}
+            </span>
+          </div>
+          {% if detection.points %}
+          <div class="mt-2">
+            <small>Score: +{{ detection.points }} points</small>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- YARA Matches -->
+    {% if results.yara.matches %}
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-search"></i> YARA Rule Matches
+      </div>
+      <div class="card-body analysis-container">
+        {% for match in results.yara.matches %}
+        <div class="mb-3 p-3 bg-dark rounded">
+          <h6 class="text-warning">{{ match.rule_name }}</h6>
+          <p class="mb-1">
+            <small>
+              <strong>Tags:</strong> {{ match.tags|join(', ') if match.tags else 'None' }}
+            </small>
+          </p>
+          {% if match.meta %}
+          <p class="mb-1">
+            <small>
+              <strong>Description:</strong> {{ match.meta.description }}
+            </small>
+          </p>
+          <p class="mb-1">
+            <small>
+              <strong>Severity:</strong> 
+              <span class="badge {% if match.meta.severity == 'high' %}bg-danger{% elif match.meta.severity == 'medium' %}bg-warning{% else %}bg-info{% endif %}">
+                {{ match.meta.severity|upper }}
+              </span>
+            </small>
+          </p>
+          {% endif %}
+          {% if match.strings %}
+          <div class="mt-2">
+            <small><strong>Matched Strings:</strong></small>
+            <ul class="mb-0 mt-1">
+              {% for s in match.strings[:3] %}
+              <li><small><code>{{ s }}</code></small></li>
+              {% endfor %}
+              {% if match.strings|length > 3 %}
+              <li><small>... and {{ match.strings|length - 3 }} more</small></li>
+              {% endif %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-lightbulb"></i> Security Recommendations
+      </div>
+      <div class="card-body">
+        {% if results.verdict in ['MALICIOUS', 'HIGHLY_MALICIOUS'] %}
+        <div class="alert alert-danger">
+          <h5><i class="fas fa-skull-crossbones"></i> This file is MALICIOUS!</h5>
+          <ul class="mb-0">
+            <li>❌ Do NOT open or execute this file</li>
+            <li>🗑️ Delete it immediately</li>
+            <li>🔒 If you downloaded it, change your passwords</li>
+            <li>🛡️ Run a full system antivirus scan</li>
+            <li>📊 Monitor for suspicious activity</li>
+          </ul>
+        </div>
+        {% elif results.verdict == 'SUSPICIOUS' %}
+        <div class="alert alert-warning">
+          <h5><i class="fas fa-exclamation-triangle"></i> This file is SUSPICIOUS</h5>
+          <ul class="mb-0">
+            <li>⚠️ Exercise caution with this file</li>
+            <li>🔍 Verify its source before opening</li>
+            <li>🛡️ Scan with additional antivirus tools</li>
+            <li>📤 Upload to VirusTotal for verification</li>
+          </ul>
+        </div>
+        {% else %}
+        <div class="alert alert-success">
+          <h5><i class="fas fa-check-circle"></i> This file appears CLEAN</h5>
+          <ul class="mb-0">
+            <li>✅ No threats detected by any scanner</li>
+            <li>🛡️ Continue practicing safe computing habits</li>
+            <li>📥 Always download files from trusted sources</li>
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

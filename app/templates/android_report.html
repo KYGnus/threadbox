@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Android APK Analysis Results - clamNET</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- FontAwesome -->
+  <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+
+  <!-- Custom Stylesheet -->
+  <link href="../static/css/styles.css" rel="stylesheet" />
+
+  <style>
+    body {
+      background-image: url(../static/GIF-Cybersecurity-Lockv2.gif);
+      background-size: cover;
+      font-family: "Red Hat Text", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: #ffffff;
+      padding: 40px 0;
+      min-height: 100vh;
+    }
+
+    main.p-4 {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Card styling */
+    .card {
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 25px;
+    }
+    .card:hover {
+      box-shadow: 0 6px 40px rgba(0, 255, 255, 0.35);
+    }
+
+    .card-header {
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      letter-spacing: 0.03em;
+    }
+
+    .verdict-badge {
+      font-size: 1.2rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+    }
+    .verdict-clean { background: #3ddc84; color: #000; }
+    .verdict-suspicious { background: #ffaa00; color: #000; }
+    .verdict-malicious { background: #ff4444; color: #fff; }
+
+    .probability-display {
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
+    
+    .probability-good { color: #3ddc84; }
+    .probability-medium { color: #ffaa00; }
+    .probability-high { color: #ff4444; }
+
+    .permission-item {
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 4px solid #3ddc84;
+      font-size: 0.9rem;
+    }
+    
+    .permission-danger {
+      border-left-color: #ff4444;
+      background: rgba(255, 68, 68, 0.1);
+    }
+    
+    .permission-warning {
+      border-left-color: #ffaa00;
+      background: rgba(255, 170, 0, 0.1);
+    }
+
+    .api-call {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      color: #66d9ef;
+      padding: 6px 10px;
+      margin-bottom: 5px;
+      background: rgba(102, 217, 239, 0.1);
+      border-radius: 4px;
+      border-left: 3px solid #66d9ef;
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, #3ddc84, #34a853);
+      border: none;
+      font-weight: 600;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(45deg, #2bc973, #289446);
+    }
+    .btn-outline-info {
+      color: #3ddc84;
+      border-color: #3ddc84;
+    }
+    .btn-outline-info:hover {
+      background-color: #3ddc84;
+      color: #000;
+    }
+
+    .analysis-container {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.6);
+    }
+    
+    .progress-bar-custom {
+      height: 10px;
+      border-radius: 5px;
+    }
+    
+    .score-guide {
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+      border: 1px solid rgba(61, 220, 132, 0.3);
+    }
+    
+    .dangerous-permissions {
+      color: #ff4444;
+    }
+    
+    .normal-permissions {
+      color: #3ddc84;
+    }
+    
+    .signature-permissions {
+      color: #ffaa00;
+    }
+    
+    .collapse-section {
+      margin-top: 15px;
+    }
+    
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    
+    /* Android specific colors */
+    .android-green {
+      color: #3ddc84;
+    }
+    
+    .android-bg-green {
+      background-color: rgba(61, 220, 132, 0.1);
+    }
+    
+    .stats-card {
+      text-align: center;
+      padding: 15px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.4);
+    }
+    
+    .stats-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #3ddc84;
+    }
+    
+    .stats-label {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <main class="p-4" role="main">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 style="color:white;">
+        <i class="fab fa-android android-green"></i> Android APK Analysis Results
+      </h1>
+      <img src="../static/Android-Logo.png" alt="Android Logo" height="60" />
+    </div>
+
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-4 bg-transparent px-0">
+        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+        <li class="breadcrumb-item"><a href="/android-analysis" class="text-white">Android Analysis</a></li>
+        <li class="breadcrumb-item active text-white">Results</li>
+      </ol>
+    </nav>
+
+    <!-- Verdict Summary -->
+    <div class="card text-center">
+      <div class="card-body">
+        {% if result == 'Benign' %}
+        <span class="verdict-badge verdict-clean"><i class="fas fa-check-circle"></i> BENIGN</span>
+        {% elif result == 'Malware' %}
+        <span class="verdict-badge verdict-malicious"><i class="fas fa-skull-crossbones"></i> MALWARE</span>
+        {% endif %}
+
+        <div class="probability-display {% if probability >= 80 %}probability-high{% elif probability >= 50 %}probability-medium{% else %}probability-good{% endif %} mt-3">
+          {{ probability }}%
+          <div class="progress mt-2" style="height: 10px; width: 60%; margin: 0 auto;">
+            <div class="progress-bar {% if probability >= 80 %}bg-danger{% elif probability >= 50 %}bg-warning{% else %}bg-success{% endif %}" 
+                 style="width: {{ probability }}%"></div>
+          </div>
+        </div>
+
+        <p class="mt-3" style="color:cyan;">
+          <strong>File:</strong> {{ filename }}<br>
+          <strong>Analysis Time:</strong> {{ time }}
+        </p>
+
+        <div class="mt-4">
+          <a href="/android-analysis" class="btn btn-primary me-2">
+            <i class="fas fa-redo"></i> New Analysis
+          </a>
+          <a href="/" class="btn btn-outline-info">
+            <i class="fas fa-home"></i> Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+        <div class="row mt-4">
+      <!-- Permissions Analysis -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-shield-alt android-green"></i> Permissions Analysis ({{ permissions|length }})
+          </div>
+          <div class="card-body analysis-container">
+            <div class="mb-3">
+              <small class="text-muted">
+                <span class="dangerous-permissions">Red</span> = Dangerous | 
+                <span class="signature-permissions">Yellow</span> = Signature | 
+                <span class="normal-permissions">Green</span> = Normal
+              </small>
+            </div>
+            
+            {% for permission in permissions %}
+              {% if 'DANGEROUS' in permission or 'SIGNATURE' in permission %}
+                {% if 'DANGEROUS' in permission %}
+                <div class="permission-item permission-danger">
+                  <i class="fas fa-exclamation-triangle"></i> {{ permission }}
+                </div>
+                {% elif 'SIGNATURE' in permission %}
+                <div class="permission-item permission-warning">
+                  <i class="fas fa-key"></i> {{ permission }}
+                </div>
+                {% endif %}
+              {% else %}
+                <div class="permission-item">
+                  <i class="fas fa-check-circle normal-permissions"></i> {{ permission }}
+                </div>
+              {% endif %}
+            {% endfor %}
+            
+            {% if permissions|length == 0 %}
+              <p class="text-muted">No permissions extracted</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Top API Calls -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-code android-green"></i> Top API Calls (Top 20)
+          </div>
+          <div class="card-body analysis-container">
+            {% for api in api_calls %}
+              <div class="api-call">
+                {{ api }}
+              </div>
+            {% endfor %}
+            
+            {% if api_calls|length == 0 %}
+              <p class="text-muted">No API calls extracted</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analysis Details -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <i class="fas fa-info-circle android-green"></i> Analysis Details
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6" style="color:white;">
+            <h5>Model Information</h5>
+            <ul class="list-unstyled">
+              <li><strong>Model:</strong> Hachirou18/NyerAndroidMalware</li>
+              <li><strong>Type:</strong> Transformer Sequence Classification</li>
+              <li><strong>Features:</strong> Permissions + API Calls</li>
+              <li><strong>Input:</strong> {{ total_permissions + total_api_calls }} features</li>
+            </ul>
+          </div>
+          <div class="col-md-6" style="color:white;">
+            <h5>Interpretation Guide</h5>
+            <ul class="list-unstyled">
+              <li><span class="badge bg-success">0-30%</span> Likely Benign</li>
+              <li><span class="badge bg-warning">31-70%</span> Suspicious</li>
+              <li><span class="badge bg-danger">71-100%</span> Likely Malicious</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="collapse-section">
+          <div class="section-title" data-bs-toggle="collapse" data-bs-target="#dangerousPerms">
+            <h6 class="android-green">
+              <i class="fas fa-exclamation-triangle"></i> Dangerous Permission Groups
+              <i class="fas fa-chevron-down"></i>
+            </h6>
+          </div>
+          <div id="dangerousPerms" class="collapse">
+            <div class="alert alert-danger mt-2">
+              <h6>High-Risk Permission Groups:</h6>
+              <ul class="mb-0">
+                <li><code>android.permission-group.CALENDAR</code> - Calendar access</li>
+                <li><code>android.permission-group.CAMERA</code> - Camera access</li>
+                <li><code>android.permission-group.CONTACTS</code> - Contacts access</li>
+                <li><code>android.permission-group.LOCATION</code> - Location tracking</li>
+                <li><code>android.permission-group.MICROPHONE</code> - Microphone access</li>
+                <li><code>android.permission-group.PHONE</code> - Phone calls/SMS</li>
+                <li><code>android.permission-group.SENSORS</code> - Body sensors</li>
+                <li><code>android.permission-group.SMS</code> - SMS access</li>
+                <li><code>android.permission-group.STORAGE</code> - Storage access</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    {% if result == 'Malware' or probability >= 50 %}
+    <div class="card mt-4 border-danger">
+      <div class="card-header bg-danger text-white">
+        <i class="fas fa-exclamation-triangle"></i> Security Recommendations
+      </div>
+      <div class="card-body" style="color:white;">
+        <h5>This APK shows signs of potential malware:</h5>
+        <ul>
+          <li><strong>Do not install</strong> this APK on any device</li>
+          <li>If already installed, <strong>immediately uninstall</strong> it</li>
+          <li>Scan your device with antivirus software</li>
+          <li>Monitor for unusual battery drain or data usage</li>
+          <li>Check for suspicious background processes</li>
+          <li>Consider factory reset if device shows signs of compromise</li>
+        </ul>
+        
+        <div class="alert alert-warning mt-3">
+          <i class="fas fa-lightbulb"></i> <strong>Note:</strong> 
+          This analysis is based on AI model predictions. For complete certainty, 
+          submit to services like VirusTotal for multi-engine scanning.
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card mt-4 border-success">
+      <div class="card-header bg-success text-white">
+        <i class="fas fa-check-circle"></i> Security Status
+      </div>
+      <div class="card-body" style="color: white;;">
+        <h5>This APK appears to be safe:</h5>
+        <ul>
+          <li>No obvious malware indicators detected</li>
+          <li>Permissions requested are reasonable</li>
+          <li>API usage patterns appear normal</li>
+        </ul>
+        
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle"></i> <strong>Note:</strong> 
+          While this APK appears safe, always download apps from trusted sources 
+          like Google Play Store and keep your device updated.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Add toggle functionality for collapsible sections
+    document.addEventListener('DOMContentLoaded', function() {
+      // Toggle chevron icon on section title click
+      const sectionTitles = document.querySelectorAll('.section-title');
+      sectionTitles.forEach(title => {
+        title.addEventListener('click', function() {
+          const icon = this.querySelector('i.fa-chevron-down, i.fa-chevron-up');
+          if (icon.classList.contains('fa-chevron-down')) {
+            icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+          } else {
+            icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+          }
+        });
+      });
+      
+      // Color code permissions based on danger level
+      const permissionItems = document.querySelectorAll('.permission-item');
+      permissionItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes('dangerous')) {
+          item.classList.add('permission-danger');
+        } else if (text.includes('signature')) {
+          item.classList.add('permission-warning');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
