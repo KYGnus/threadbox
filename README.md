@@ -1,9 +1,14 @@
+Here's the updated README.md with the Docker commands added to the **Docker Installation** section and a new **Docker Management** section:
+
+---
+
 # clamNET - Advanced Malware Detection & Network Security Platform
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8%2B-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 ![Flask](https://img.shields.io/badge/flask-2.0%2B-red)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
 
 **clamNET** is a comprehensive, enterprise-grade security platform that combines multiple malware detection engines, network traffic analysis, and threat intelligence capabilities into a unified web interface. Built for security professionals, SOC analysts, and system administrators.
 
@@ -15,6 +20,7 @@
 - [System Architecture](#-system-architecture)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
+- [Docker Management](#-docker-management)
 - [Module Documentation](#-module-documentation)
 - [API Reference](#-api-reference)
 - [Project Structure](#-project-structure)
@@ -28,7 +34,7 @@
 ## 🚀 Key Features
 
 ### 🔬 **Multi-Engine Malware Analysis**
-| Engine | Capabilities | Supported Formats|
+| Engine | Capabilities | Supported Formats |
 |--------|------------|-------------------|
 | **ClamAV** | Signature-based detection | All files, archives |
 | **YARA** | Pattern matching rules | Custom rules, IOC scanning |
@@ -90,7 +96,7 @@
 ```bash
 # System dependencies
 sudo apt-get update
-sudo apt-get install -y clamav clamav-daemon yara python3-pip
+sudo apt-get install -y clamav clamav-daemon yara python3-pip docker docker-compose
 ```
 
 ### Option 1: Docker Installation (Recommended)
@@ -100,14 +106,18 @@ sudo apt-get install -y clamav clamav-daemon yara python3-pip
 git clone https://github.com/KYGnus/clamNET.git
 cd clamNET
 
-# Build Docker image
-docker build -t clamnet:latest .
+# Build and run with Docker Compose
+docker-compose up --build
 
-# Run container
-docker run -d -p 5005:5005 \
-  -v /path/to/uploads:/app/uploads \
-  -v /path/to/rules:/app/rules \
-  --name clamnet clamnet:latest
+# Or build manually
+docker build -t clamnet:latest .
+docker run -d \
+  -p 5005:5005 \
+  -v clamnet_uploads:/app/uploads \
+  -v clamnet_results:/app/scan_results \
+  -v clamnet_ioc:/app/ioc_rules \
+  --name clamnet \
+  clamnet:latest
 ```
 
 ### Option 2: Manual Installation
@@ -160,6 +170,90 @@ http://localhost:5005
 4. **Default login**:
 - Username: `admin`
 - Password: `[as configured]`
+
+---
+
+## 🐳 Docker Management
+
+### Basic Docker Commands
+
+```bash
+# Check logs
+docker logs -f clamnet
+
+# Execute commands in container
+docker exec -it clamnet bash
+
+# Check ClamAV status
+docker exec clamnet clamdscan --version
+docker exec clamnet freshclam --version
+
+# Test Maldet
+docker exec clamnet maldet --help
+
+# Stop container
+docker stop clamnet
+
+# Start container
+docker start clamnet
+
+# Remove container
+docker rm clamnet
+
+# Remove image
+docker rmi clamnet:latest
+```
+
+### Docker Compose Commands
+
+```bash
+# Start services in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+
+# Rebuild and start
+docker-compose up --build
+
+# Scale services (if configured)
+docker-compose up --scale clamnet=2
+```
+
+### Volume Management
+
+```bash
+# List volumes
+docker volume ls | grep clamnet
+
+# Inspect volume
+docker volume inspect clamnet_uploads
+
+# Backup volume
+docker run --rm -v clamnet_uploads:/source -v $(pwd):/backup alpine tar czf /backup/clamnet_uploads_backup.tar.gz -C /source .
+
+# Restore volume
+docker run --rm -v clamnet_uploads:/target -v $(pwd):/backup alpine tar xzf /backup/clamnet_uploads_backup.tar.gz -C /target
+```
+
+### Health Checks
+
+```bash
+# Check container health
+docker inspect --format='{{.State.Health.Status}}' clamnet
+
+# Monitor resource usage
+docker stats clamnet
+
+# Check running processes
+docker top clamnet
+```
 
 ---
 
@@ -309,6 +403,7 @@ clamNET/
 ├── uploads/                     # File upload directory
 ├── scan_results/               # Analysis results storage
 ├── Dockerfile                  # Container configuration
+├── docker-compose.yml          # Docker Compose configuration
 ├── requirements.txt            # Python dependencies
 ├── requirements-main.txt       # Core dependencies
 ├── tools.txt                  # Third-party tools manifest
@@ -363,6 +458,9 @@ python -m pytest tests/test_file_scanner.py
 
 # Load testing
 python -m locust -f tests/locustfile.py
+
+# Test Docker container
+docker exec clamnet python -m pytest tests/
 ```
 
 ---
@@ -382,6 +480,7 @@ We welcome contributions! Please follow these steps:
 - Add unit tests for new features
 - Update documentation
 - Ensure all tests pass
+- Test Docker builds locally
 
 ---
 
@@ -408,7 +507,8 @@ of this software and associated documentation files...
 
 🐙 **GitHub:** [https://github.com/KYGnus](https://github.com/KYGnus)
 
-🌐 Website: https://kygnus.github.io
+🌐 **Website:** [https://kygnus.github.io](https://kygnus.github.io)
+
 
 ---
 
@@ -421,28 +521,19 @@ of this software and associated documentation files...
 - **LIEF** - Binary parsing
 - **Capstone** - Disassembly framework
 - **Scapy/Pyshark** - Network analysis
+- **Docker** - Containerization platform
 
 ---
 
 ## 🗺️ Roadmap
 
-### Version 1.1.0 (Q2 2024)
 - [ ] Integration with VirusTotal API
-- [ ] Email notification system
-- [ ] Scheduled scanning
-- [ ] LDAP authentication
+- [ ] check Malicious URL with AI
+- [ ] analyze .exe Files with AI
+- [ ] Log Files Analyzer
+- [ ] Docker Swarm support
 
-### Version 1.2.0 (Q3 2024)
-- [ ] Machine learning model retraining UI
-- [ ] Custom YARA rule editor
-- [ ] Threat intelligence feeds
-- [ ] API key management
 
-### Version 2.0.0 (Q4 2024)
-- [ ] Distributed scanning architecture
-- [ ] SIEM integration (Splunk, ELK)
-- [ ] Real-time threat hunting
-- [ ] Mobile app (iOS/Android)
 
 ---
 

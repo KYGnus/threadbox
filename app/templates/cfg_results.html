@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CFG Analysis - clamNET</title>
+  <title>CFG Analysis Results - clamNET</title>
 
   <!-- Styles -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -12,7 +12,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
 
+  <!-- Prism.js for code highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-armasm.min.js"></script>
+
   <style>
+    /* Same styles as ioc-scan.html plus: */
     body {
       background-image: url(../static/GIF-Cybersecurity-Lockv2.gif);
       background-size: cover;
@@ -22,581 +30,546 @@
       min-height: 100vh;
     }
 
-    h1, h2, h3, h4, h5, h6 {
+    h1, h2, h3, h4, h5 {
       font-weight: 700;
-      color: #ffffff;
-      letter-spacing: 0.03em;
+      color: #fff;
     }
 
     h1 {
-      border-bottom: 3px solid #6f1d1d;
-      padding-bottom: 0.5rem;
-      margin-bottom: 2rem;
+      border-bottom: 2px solid #cc0000;
+      padding-bottom: 0.4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .navbar, .sb-sidenav {
+      background-color: #121212 !important;
+      border-bottom: 2px solid #cc0000;
+    }
+
+    .navbar-brand {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff !important;
+    }
+
+    .nav-link {
+      color: #bbb;
+      padding: 0.65rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+
+    .nav-link:hover {
+      background-color: rgba(204, 0, 0, 0.2);
+      color: #fff;
+    }
+
+    .nav-link.active {
+      background-color: #cc0000;
+      color: #fff;
     }
 
     .card {
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
-      margin-bottom: 2rem;
       border: none;
-      background-color: rgba(40, 40, 40, 0.85);
-      color: #e6e6e6;
-      transition: transform 0.15s ease-in-out;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgb(214 51 51 / 0.6);
+      border-radius: 6px;
+      background-color: #262626;
     }
 
     .card-header {
-      background-color: #6f1d1d;
-      border-radius: 10px 10px 0 0;
-      font-weight: 700;
-      font-size: 1.1rem;
-      color: #f8f8f8;
-      padding: 1rem 1.5rem;
-      border-bottom: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      background-color: #cc0000;
+      color: #fff;
+      font-weight: 600;
+      padding: 0.7rem 1rem;
+      border-radius: 6px 6px 0 0;
     }
 
     .card-body {
-      padding: 1.5rem 2rem;
-      font-size: 1rem;
-      line-height: 1.5;
+      padding: 1.25rem;
+      background-color: #1c1c1c;
       color: #ddd;
-      background-color: rgba(24, 24, 24, 0.7);
-      border-radius: 0 0 10px 10px;
     }
 
-    /* Dispatcher cards */
-    .dispatcher-card {
-      background: rgba(100, 0, 0, 0.4);
+    .code-block {
+      background-color: #2d2d2d;
       border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-left: 4px solid #d63333;
-      transition: all 0.3s ease;
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 3px solid #cc0000;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: #e0e0e0;
+      max-height: 500px;
+      overflow-y: auto;
     }
 
-    .dispatcher-card:hover {
-      background: rgba(214, 51, 51, 0.3);
-      box-shadow: 0 4px 12px rgb(214 51 51 / 0.3);
-    }
-
-    /* Disassembly styling */
     .disassembly-line {
-      font-family: 'Courier New', monospace;
-      padding: 8px 12px;
-      margin: 2px 0;
-      background: rgba(30, 30, 30, 0.8);
-      border-radius: 4px;
+      display: flex;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      border-bottom: 1px solid #3d3d3d;
+      padding: 4px 0;
     }
 
-    .disassembly-line.target {
-      background: rgba(214, 51, 51, 0.3);
-      border-left: 3px solid #d63333;
+    .disassembly-address {
+      color: #6a9955;
+      min-width: 100px;
     }
 
-    /* Table styles */
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0 12px;
-      font-size: 0.95rem;
-      color: #e6e6e6;
-      background-color: transparent;
+    .disassembly-bytes {
+      color: #569cd6;
+      min-width: 150px;
+      font-family: monospace;
     }
 
-    thead tr {
-      background-color: #b02a2a;
-      color: #fff;
+    .disassembly-mnemonic {
+      color: #dcdcaa;
+      min-width: 80px;
+      font-weight: bold;
+    }
+
+    .disassembly-operands {
+      color: #9cdcfe;
+    }
+
+    .disassembly-target {
+      background-color: rgba(204, 0, 0, 0.2);
+      border-left: 3px solid #cc0000;
+    }
+
+    .stat-badge {
+      background-color: #2a2a2a;
+      border-radius: 20px;
+      padding: 5px 15px;
+      margin: 5px;
+      display: inline-block;
+      border-left: 3px solid #cc0000;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #cc0000;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #aaa;
       text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      border-radius: 10px;
     }
 
-    thead th {
-      padding: 14px 18px;
-      border: none;
-      text-align: left;
-      user-select: none;
-    }
-
-    tbody tr {
-      background-color: rgba(100, 0, 0, 0.4);
+    .dispatcher-card {
+      background-color: #2a2a2a;
       border-radius: 8px;
-      box-shadow: 0 1px 4px rgb(214 51 51 / 0.25);
-      cursor: default;
-      transition: background-color 0.3s ease;
-
+      padding: 15px;
+      margin-bottom: 15px;
+      border-left: 3px solid #00b4ff;
     }
 
-    tbody tr:hover {
-      background-color: rgba(214, 51, 51, 0.5);
-
+    .dispatcher-targets {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
     }
 
-    tbody td {
-      padding: 14px 18px;
-      vertical-align: middle;
-      border: none;
-
+    .target-box {
+      background-color: #1a1a1a;
+      padding: 10px;
+      border-radius: 6px;
+      flex: 1;
     }
 
-    /* Navigation tabs */
-    .nav-tabs {
-      border-bottom: 2px solid #6f1d1d;
+    .target-true {
+      border-left: 3px solid #00ff88;
     }
 
-    .nav-tabs .nav-link {
-      color: #ccc;
-      border: none;
-      padding: 12px 20px;
-      font-weight: 600;
-      transition: all 0.3s ease;
+    .target-false {
+      border-left: 3px solid #ff2a6d;
     }
 
-    .nav-tabs .nav-link:hover {
-      color: #fff;
-      background-color: rgba(214, 51, 51, 0.2);
+    .pe-section {
+      background-color: #2a2a2a;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
     }
 
-    .nav-tabs .nav-link.active {
-      color: #fff;
-      background-color: #6f1d1d;
-      border: none;
-      position: relative;
+    .section-name {
+      color: #569cd6;
+      font-weight: bold;
     }
 
-    .nav-tabs .nav-link.active::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background-color: #d63333;
+    .entropy-high {
+      color: #ff2a6d;
     }
 
-    /* Buttons */
-    .btn-outline-danger {
-      font-weight: 700;
-      border-radius: 30px;
-      padding: 0.6rem 1.6rem;
-      border-width: 2.5px;
-      transition: background-color 0.35s ease, color 0.35s ease;
-      letter-spacing: 0.05em;
+    .entropy-medium {
+      color: #ffcc00;
     }
 
-    .btn-outline-danger:hover {
-      background-color: #d63333;
-      color: #fff;
+    .entropy-low {
+      color: #00ff88;
     }
 
     .btn-primary {
-      background-color: #6f1d1d;
-      border-color: #6f1d1d;
-      font-weight: 700;
-      border-radius: 30px;
-      padding: 0.6rem 1.6rem;
-      transition: background-color 0.35s ease, border-color 0.35s ease;
+      background-color: #cc0000;
+      border-color: #cc0000;
     }
 
     .btn-primary:hover {
-      background-color: #d63333;
-      border-color: #d63333;
+      background-color: #e60000;
+      border-color: #e60000;
     }
 
-    /* Alerts */
-    .alert {
-      border-radius: 8px;
+    .btn-success {
+      background-color: #28a745;
+      border-color: #28a745;
+    }
+
+    .nav-tabs {
+      border-bottom-color: #444;
+    }
+
+    .nav-tabs .nav-link {
+      color: #aaa;
       border: none;
     }
 
-    .alert-dark {
-      background-color: rgba(100, 0, 0, 0.4);
-      color: #fff;
-      border-left: 4px solid #d63333;
+    .nav-tabs .nav-link.active {
+      background-color: #cc0000;
+      color: white;
+      border: none;
     }
 
-    /* Hex bytes styling */
-    .hex-byte {
-      display: inline-block;
-      width: 24px;
-      text-align: center;
-      font-family: 'Courier New', monospace;
+    .badge-cfg {
+      background-color: #00b4ff;
+      color: white;
     }
 
-    .hex-byte.highlight {
-      background: rgba(214, 51, 51, 0.5);
-      border-radius: 3px;
-      color: #fff;
-    }
-
-    /* Parameter description styling */
-    .param-desc {
-      font-size: 0.9rem;
-      color: #c9c9c9;
-      font-style: italic;
-      margin-bottom: 1rem;
-      user-select: none;
-      line-height: 1.3;
-    }
-
-    /* Badges */
-    .badge {
-      font-weight: 600;
-      padding: 0.35em 0.65em;
-    }
-
-    .badge.bg-danger {
-      background-color: #d63333 !important;
-    }
-
-    /* Scrollable containers */
-    .scrollable-container {
-      max-height: 500px;
+    .warnings-list {
+      max-height: 200px;
       overflow-y: auto;
-      padding-right: 10px;
-    }
-
-    .scrollable-container::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    .scrollable-container::-webkit-scrollbar-track {
-      background: rgba(100, 0, 0, 0.2);
-      border-radius: 10px;
-    }
-
-    .scrollable-container::-webkit-scrollbar-thumb {
-      background: rgba(214, 51, 51, 0.6);
-      border-radius: 10px;
     }
   </style>
 </head>
 
 <body class="sb-nav-fixed">
-    <!-- Main Content -->
+
+  <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark px-4">
+    <a class="navbar-brand text-glow" href="/">clamNET</a>
+    <button class="btn btn-link btn-sm" id="sidebarToggle"><i class="fas fa-bars icon-glow"></i></button>
+  </nav>
+
+  <div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+      <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+        <div class="sb-sidenav-menu px-2">
+          <div class="nav">
+            <div class="sb-sidenav-menu-heading">Core</div>
+            <a class="nav-link" href="/">
+              <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt icon-glow"></i></div>
+              Dashboard
+            </a>
+            <div class="sb-sidenav-menu-heading">Tools</div>
+            <a class="nav-link active" href="/analyze-cfg" style="background-color:#f50000;color:white">
+              <div class="sb-nav-link-icon"><i class="fas fa-project-diagram" style="color:white;"></i></div>
+              CFG Analysis
+            </a>
+            <a class="nav-link" href="/malware-analysis">
+              <div class="sb-nav-link-icon"><i class="fas fa-search" style="color:#d63333;"></i></div>
+              Malware Analysis
+            </a>
+          </div>
+        </div>
+        <div class="sb-sidenav-footer text-light">
+          <div class="small">System Status:</div>
+          <span class="text-success">●</span> Operational
+        </div>
+      </nav>
+    </div>
+
     <div id="layoutSidenav_content">
       <main class="p-4">
         <div class="d-flex justify-content-between align-items-center">
-          <h1 class="mb-3">Control Flow Graph Analysis</h1>
+          <h1 class="mb-3 text-glow">CFG Analysis Results</h1>
           <img src="../static/ClamAV.svg" alt="ClamAV Logo" height="60" />
         </div>
 
         <ol class="breadcrumb mb-4">
           <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
-          <li class="breadcrumb-item"><a href="/cfg-analysis">CFG Analysis</a></li>
+          <li class="breadcrumb-item"><a href="/analyze-cfg">CFG Analysis</a></li>
           <li class="breadcrumb-item active">Results</li>
         </ol>
 
-        <div class="card mb-4">
-          <div class="alert alert-dark mb-3">
-            <i class="fas fa-file-alt me-2"></i> Analysis Results for: <strong>{{ filename }}</strong>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Summary Stats -->
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card text-white">
+              <div class="card-body text-center">
+                <div class="stat-number">{{ results.file_info.size | default(0) | humanize_bytes }}</div>
+                <div class="stat-label">File Size</div>
+                <small class="text-muted">{{ results.file_info.filename }}</small>
+              </div>
+            </div>
           </div>
-          <div class="card-body">
-            {% if results.error %}
-              <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Analysis failed: {{ results.error }}
+          <div class="col-md-3">
+            <div class="card text-white">
+              <div class="card-body text-center">
+                <div class="stat-number">{{ disassembly_count }}</div>
+                <div class="stat-label">Instructions</div>
+                <small class="text-muted">Disassembled</small>
               </div>
-            {% else %}
-              <ul class="nav nav-tabs" id="analysisTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                  <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-tab-pane" type="button" role="tab">
-                    <i class="fas fa-info-circle me-2"></i>File Info
-                  </button>
-                </li>
-                {% if results.pe_analysis %}
-                <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="pe-tab" data-bs-toggle="tab" data-bs-target="#pe-tab-pane" type="button" role="tab">
-                    <i class="fas fa-cube me-2"></i>PE Structure
-                  </button>
-                </li>
-                {% endif %}
-                <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="disassembly-tab" data-bs-toggle="tab" data-bs-target="#disassembly-tab-pane" type="button" role="tab">
-                    <i class="fas fa-code me-2"></i>Disassembly
-                  </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="cfg-tab" data-bs-toggle="tab" data-bs-target="#cfg-tab-pane" type="button" role="tab">
-                    <i class="fas fa-project-diagram me-2"></i>CFG Analysis
-                  </button>
-                </li>
-              </ul>
-              
-              <div class="tab-content" id="analysisTabsContent">
-                <!-- File Info Tab -->
-                <div class="tab-pane fade show active" id="file-tab-pane" role="tabpanel">
-                  <table class="table table-borderless">
-                    <tr>
-                      <td width="30%" style="color: white;"><strong>Filename:</strong></td>
-                      <td style="color: white;">{{ results.file_info.filename }}</td>
-                    </tr>
-                    <tr>
-                      <td style="color: white;"><strong>Size:</strong></td>
-                      <td style="color: white;">{{ results.file_info.size }} bytes</td>
-                    </tr>
-                    <tr>
-                      <td style="color: white;"><strong>MD5:</strong></td>
-                      <td style="color: white;"><code>{{ results.file_info.md5 }}</code></td>
-                    </tr>
-                    <tr>
-                      <td style="color: white;"><strong>Analysis Time:</strong></td>
-                      <td style="color: white;">{{ time }}</td>
-                    </tr>
-                    <tr>
-                      <td style="color: white;"><strong>System IP:</strong></td>
-                      <td style="color: white;">{{ ip }}</td>
-                    </tr>
-                    <tr>
-                      <td style="color: white;"><strong>OS:</strong></td>
-                      <td style="color: white;">{{ os }}</td>
-                    </tr>
-                  </table>
-                </div>
-                
-                <!-- PE Analysis Tab -->
-                {% if results.pe_analysis %}
-                <div class="tab-pane fade" id="pe-tab-pane" role="tabpanel">
-                  {% if results.pe_analysis.error %}
-                    <div class="alert alert-warning">{{ results.pe_analysis.error }}</div>
-                  {% else %}
-                    <div class="card mb-4">
-                      <div class="card-header">
-                        <i class="fas fa-cube me-2"></i>PE Header
-                      </div>
-                      <div class="card-body">
-                        <table class="table table-borderless">
-                          <tr>
-                            <td width="30%" style="color: white;"><strong>Machine:</strong></td>
-                            <td style="color: white;">{{ results.pe_analysis.header.machine }}</td>
-                          </tr>
-                          <tr>
-                            <td style="color: white;"><strong>Timestamp:</strong></td>
-                            <td style="color: white;">{{ results.pe_analysis.header.timestamp }}</td>
-                          </tr>
-                          <tr>
-                            <td style="color: white;"><strong>Characteristics:</strong></td>
-                            <td style="color: white;">{{ results.pe_analysis.header.characteristics|join(', ') }}</td>
-                          </tr>
-                        </table>
-                      </div>
-                    </div>
-                    
-                    <div class="card mb-4">
-                      <div class="card-header">
-                        <i class="fas fa-layer-group me-2"></i>Sections ({{ results.pe_analysis.sections|length }})
-                      </div>
-                      <div class="card-body">
-                        <div class="scrollable-container">
-                          <table class="table">
-                            <thead>
-                              <tr style="color: white;">
-                                <th>Name</th>
-                                <th>Virtual Size</th>
-                                <th>Raw Size</th>
-                                <th>Entropy</th>
-                              </tr>
-                            </thead>
-                            <tbody >
-                              {% for section in results.pe_analysis.sections %}
-                              <tr>
-                                <td style="color: white;">{{ section.name }}</td>
-                                <td style="color: white;">{{ section.virtual_size }}</td>
-                                <td style="color: white;">{{ section.size }}</td>
-                                <td style="color: white;">{{ "%.2f"|format(section.entropy) }}</td>
-                              </tr>
-                              {% endfor %}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {% if results.pe_analysis.resources and not results.pe_analysis.resources[0].error %}
-                    <div class="card mb-4">
-                      <div class="card-header">
-                        <i class="fas fa-archive me-2"></i>Resources ({{ results.pe_analysis.resources|length }})
-                      </div>
-                      <div class="card-body">
-                        <div class="scrollable-container">
-                          {% for resource in results.pe_analysis.resources %}
-                          <div class="mb-3">
-                            <div class="d-flex justify-content-between">
-                              <strong>
-                                {% if resource.level > 0 %}{% for i in range(resource.level) %}&nbsp;&nbsp;{% endfor %}{% endif %}
-                                {{ resource.type }}
-                              </strong>
-                              <span class="text-muted">{{ resource.size }} bytes</span>
-                            </div>
-                            <div class="small">
-                              {% if resource.name and resource.name != 'ID:N/A' %}
-                                Name: {{ resource.name }}
-                                {% if resource.offset and resource.offset != '0x0' %} | {% endif %}
-                              {% endif %}
-                              {% if resource.offset and resource.offset != '0x0' %}
-                                Offset: {{ resource.offset }}
-                              {% endif %}
-                            </div>
-                          </div>
-                          {% endfor %}
-                        </div>
-                      </div>
-                    </div>
-                    {% elif results.pe_analysis.resources and results.pe_analysis.resources[0].error %}
-                    <div class="alert alert-warning">
-                      <i class="fas fa-exclamation-triangle me-2"></i>
-                      {{ results.pe_analysis.resources[0].error }}
-                    </div>
-                    {% endif %}
-                    
-                    {% if results.pe_analysis.exports %}
-                    <div class="card">
-                      <div class="card-header">
-                        <i class="fas fa-sign-out-alt me-2"></i>Exports ({{ results.pe_analysis.exports|length }})
-                      </div>
-                      <div class="card-body">
-                        <div class="scrollable-container">
-                          <table class="table">
-                            <thead>
-                              <tr>
-                                <th>Name</th>
-                                <th>Address</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {% for exp in results.pe_analysis.exports[:10] %}
-                              <tr>
-                                <td>{{ exp.name }}</td>
-                                <td>{{ exp.address }}</td>
-                              </tr>
-                              {% endfor %}
-                            </tbody>
-                          </table>
-                          {% if results.pe_analysis.exports|length > 10 %}
-                            <div class="text-center text-muted mt-2">+ {{ results.pe_analysis.exports|length - 10 }} more exports...</div>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                    {% endif %}
-                  {% endif %}
-                </div>
-                {% endif %}
-                
-                <!-- Disassembly Tab -->
-                <div class="tab-pane fade" id="disassembly-tab-pane" role="tabpanel">
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Showing first {{ results.disassembly|length }} instructions
-                  </div>
-                  
-                  <div class="card">
-                    <div class="card-header">
-                      <i class="fas fa-code me-2"></i>Disassembly
-                    </div>
-                    <div class="card-body">
-                      <div class="scrollable-container" style="font-family: 'Courier New', monospace;">
-                        {% for insn in results.disassembly %}
-                        <div class="disassembly-line {% if insn.is_target %}target{% endif %}">
-                          <span class="text-muted me-3">{{ insn.address }}</span>
-                          <span class="me-3">{{ insn.bytes }}</span>
-                          <strong class="me-2">{{ insn.mnemonic }}</strong>
-                          <span>{{ insn.op_str }}</span>
-                        </div>
-                        {% endfor %}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- CFG Analysis Tab -->
-                <div class="tab-pane fade" id="cfg-tab-pane" role="tabpanel">
-                  {% if results.warnings %}
-                    {% for warning in results.warnings %}
-                    <div class="alert alert-warning">
-                      <i class="fas fa-exclamation-triangle me-2"></i>
-                      {{ warning }}
-                    </div>
-                    {% endfor %}
-                  {% endif %}
-                  
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Found {{ results.cfg_analysis.deobfuscated|length }} control flow dispatchers
-                  </div>
-                  
-                  <div class="scrollable-container">
-                    {% for dispatcher in results.cfg_analysis.deobfuscated %}
-                    <div class="dispatcher-card">
-                      <h5>
-                        <i class="fas fa-random me-2"></i>
-                        {{ dispatcher.type }} Dispatcher @ {{ dispatcher.offset }}
-                      </h5>
-                      
-                      <div class="row mt-3">
-                        <div class="col-md-6">
-                          <div class="mb-2">
-                            <strong>Condition False:</strong> <span class="text-info">{{ dispatcher.target_false }}</span>
-                          </div>
-                          <div class="mb-2">
-                            <strong>Condition True:</strong> <span class="text-info">{{ dispatcher.target_true }}</span>
-                          </div>
-                        </div>
-                        <div class="col-md-6">
-                          <div class="mb-2">
-                            <strong>Raw Bytes:</strong> <code>{{ dispatcher.bytes }}</code>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {% if dispatcher.disassembly %}
-                      <div class="mt-3">
-                        <h6><i class="fas fa-code me-2"></i>Disassembly Context</h6>
-                        <div style="font-family: 'Courier New', monospace;">
-                          {% for line in dispatcher.disassembly %}
-                          <div class="disassembly-line {% if line.is_target %}target{% endif %}">
-                            <span class="text-muted me-3">{{ line.address }}</span>
-                            <span class="me-3">{{ line.bytes }}</span>
-                            <strong class="me-2">{{ line.mnemonic }}</strong>
-                            <span>{{ line.op_str }}</span>
-                          </div>
-                          {% endfor %}
-                        </div>
-                      </div>
-                      {% endif %}
-                    </div>
-                    {% endfor %}
-                  </div>
-                </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-white">
+              <div class="card-body text-center">
+                <div class="stat-number">{{ dispatcher_count }}</div>
+                <div class="stat-label">Dispatchers</div>
+                <small class="text-muted">Detected</small>
               </div>
-            {% endif %}
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card text-white">
+              <div class="card-body text-center">
+                <div class="stat-number">{{ results.pe_analysis.sections | length if results.pe_analysis.sections else 0 }}</div>
+                <div class="stat-label">PE Sections</div>
+                <small class="text-muted">Analyzed</small>
+              </div>
+            </div>
           </div>
         </div>
-        
-        <div class="text-center mt-4">
-          <a href="/cfg-analysis" class="btn btn-primary">
-            <i class="fas fa-arrow-left me-2"></i>Analyze Another File
+
+        <!-- Download Button -->
+        <div class="mb-4">
+          <a href="{{ url_for('download_cfg_result') }}" class="btn btn-info">
+            <i class="fas fa-download me-2"></i> Download Full Analysis (JSON)
           </a>
+          <a href="/analyze-cfg" class="btn btn-primary ms-2">
+            <i class="fas fa-upload me-2"></i> Analyze Another File
+          </a>
+        </div>
+
+        <!-- Main Results Tabs -->
+        <div class="card text-white">
+          <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="resultTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="disassembly-tab" data-bs-toggle="tab" data-bs-target="#disassembly" type="button" role="tab">Disassembly</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dispatchers-tab" data-bs-toggle="tab" data-bs-target="#dispatchers" type="button" role="tab">Dispatcher Analysis</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pe-tab" data-bs-toggle="tab" data-bs-target="#pe" type="button" role="tab">PE Structure</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">File Info</button>
+              </li>
+            </ul>
+          </div>
+          <div class="card-body">
+            <div class="tab-content" id="resultTabsContent">
+              
+              <!-- Disassembly Tab -->
+              <div class="tab-pane fade show active" id="disassembly" role="tabpanel">
+                <h5>Disassembled Code <small class="text-muted">(First {{ disassembly_count }} instructions)</small></h5>
+                {% if results.disassembly and results.disassembly|length > 0 %}
+                  <div class="code-block">
+                    {% for inst in results.disassembly %}
+                      {% if inst.error %}
+                        <div class="text-danger">{{ inst.error }}</div>
+                      {% else %}
+                        <div class="disassembly-line {% if inst.is_target %}disassembly-target{% endif %}">
+                          <span class="disassembly-address">{{ inst.address }}</span>
+                          <span class="disassembly-bytes">{{ inst.bytes }}</span>
+                          <span class="disassembly-mnemonic">{{ inst.mnemonic }}</span>
+                          <span class="disassembly-operands">{{ inst.op_str }}</span>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="alert alert-dark">No disassembly available</div>
+                {% endif %}
+              </div>
+              
+              <!-- Dispatchers Tab -->
+              <div class="tab-pane fade" id="dispatchers" role="tabpanel">
+                <h5>Detected Dispatchers</h5>
+                {% if results.cfg_analysis.deobfuscated and results.cfg_analysis.deobfuscated|length > 0 %}
+                  {% for disp in results.cfg_analysis.deobfuscated %}
+                    <div class="dispatcher-card">
+                      <h6><i class="fas fa-code-branch me-2"></i>Dispatcher at {{ disp.offset }}</h6>
+                      <div class="mb-2">
+                        <span class="badge bg-primary">{{ disp.type }}</span>
+                        <span class="badge bg-secondary">Bytes: {{ disp.bytes }}</span>
+                      </div>
+                      
+                      {% if disp.error %}
+                        <div class="text-danger">{{ disp.error }}</div>
+                      {% else %}
+                        <div class="dispatcher-targets">
+                          <div class="target-box target-false">
+                            <small>ZF=0, CF=0</small>
+                            <div><strong>Target:</strong> {{ disp.target_false }}</div>
+                          </div>
+                          <div class="target-box target-true">
+                            <small>ZF=1, CF=1</small>
+                            <div><strong>Target:</strong> {{ disp.target_true }}</div>
+                          </div>
+                        </div>
+                        
+                        {% if disp.disassembly %}
+                          <div class="mt-3">
+                            <small>Context:</small>
+                            <div class="code-block mt-2" style="max-height: 200px;">
+                              {% for ctx in disp.disassembly %}
+                                <div class="disassembly-line {% if ctx.is_target %}disassembly-target{% endif %}">
+                                  <span class="disassembly-address">{{ ctx.address }}</span>
+                                  <span class="disassembly-bytes">{{ ctx.bytes }}</span>
+                                  <span class="disassembly-mnemonic">{{ ctx.mnemonic }}</span>
+                                  <span class="disassembly-operands">{{ ctx.op_str }}</span>
+                                </div>
+                              {% endfor %}
+                            </div>
+                          </div>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="alert alert-dark">No dispatchers detected</div>
+                {% endif %}
+              </div>
+              
+              <!-- PE Structure Tab -->
+              <div class="tab-pane fade" id="pe" role="tabpanel">
+                <h5>PE File Analysis</h5>
+                
+                {% if results.pe_analysis and results.pe_analysis.error %}
+                  <div class="alert alert-warning">{{ results.pe_analysis.error }}</div>
+                {% endif %}
+                
+                {% if results.pe_analysis.header %}
+                  <div class="pe-section">
+                    <h6><i class="fas fa-header me-2"></i>Header</h6>
+                    <p><strong>Machine:</strong> {{ results.pe_analysis.header.machine }}</p>
+                    <p><strong>Timestamp:</strong> {{ results.pe_analysis.header.timestamp }}</p>
+                    <p><strong>Characteristics:</strong></p>
+                    <ul>
+                      {% for char in results.pe_analysis.header.characteristics %}
+                        <li>{{ char }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
+                
+                {% if results.pe_analysis.sections %}
+                  <h6 class="mt-4"><i class="fas fa-layer-group me-2"></i>Sections</h6>
+                  {% for section in results.pe_analysis.sections %}
+                    <div class="pe-section">
+                      <div class="d-flex justify-content-between">
+                        <span class="section-name">{{ section.name }}</span>
+                        <span class="{% if section.entropy > 7 %}entropy-high{% elif section.entropy > 6 %}entropy-medium{% else %}entropy-low{% endif %}">
+                          Entropy: {{ "%.2f"|format(section.entropy) }}
+                        </span>
+                      </div>
+                      <div class="row mt-2">
+                        <div class="col-md-4">
+                          <small>Virtual Size: {{ section.virtual_size }}</small>
+                        </div>
+                        <div class="col-md-4">
+                          <small>Raw Size: {{ section.size }}</small>
+                        </div>
+                        <div class="col-md-4">
+                          <small>Characteristics:</small>
+                          <ul class="mb-0">
+                            {% for char in section.characteristics[:3] %}
+                              <li><small>{{ char }}</small></li>
+                            {% endfor %}
+                            {% if section.characteristics|length > 3 %}
+                              <li><small>...</small></li>
+                            {% endif %}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+                
+                {% if results.pe_analysis.imports %}
+                  <h6 class="mt-4"><i class="fas fa-download me-2"></i>Imports</h6>
+                  <div class="code-block" style="max-height: 300px;">
+                    {% for imp in results.pe_analysis.imports %}
+                      <div><strong>{{ imp.name }}</strong></div>
+                      <ul>
+                        {% for entry in imp.entries[:10] %}
+                          <li>{{ entry.name }} @ {{ entry.iat_address }}</li>
+                        {% endfor %}
+                        {% if imp.entries|length > 10 %}
+                          <li>... and {{ imp.entries|length - 10 }} more</li>
+                        {% endif %}
+                      </ul>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              
+              <!-- File Info Tab -->
+              <div class="tab-pane fade" id="info" role="tabpanel">
+                <h5>File Information</h5>
+                <table class="table table-dark table-striped">
+                  <tr>
+                    <th>Filename</th>
+                    <td>{{ results.file_info.filename }}</td>
+                  </tr>
+                  <tr>
+                    <th>Size</th>
+                    <td>{{ results.file_info.size | humanize_bytes }}</td>
+                  </tr>
+                  <tr>
+                    <th>MD5</th>
+                    <td><code>{{ results.file_info.md5 }}</code></td>
+                  </tr>
+                </table>
+                
+                {% if results.warnings and results.warnings|length > 0 %}
+                  <h6 class="mt-4">Warnings</h6>
+                  <div class="warnings-list">
+                    {% for warning in results.warnings %}
+                      <div class="alert alert-warning py-2">{{ warning }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 
-      <!-- Footer -->
       <footer class="py-4 mt-auto">
         <div class="container-fluid px-4">
           <div class="d-flex justify-content-between align-items-center small">
             <div class="text-muted">© clamNET 2025</div>
             <div>
-              <a href="#">Privacy</a>
-              &middot;
-              <a href="#">Terms</a>
+              <a href="#">Privacy</a> &middot; <a href="#">Terms</a>
             </div>
           </div>
         </div>
@@ -604,35 +577,8 @@
     </div>
   </div>
 
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js"></script>
   <script src="../static/js/scripts.js"></script>
-  
-  <script>
-  $(document).ready(function() {
-    // Highlight the current bytes in hex view
-    $('.hex-view').each(function() {
-      const bytes = $(this).data('bytes').split(' ');
-      const highlightIndex = $(this).data('highlight-index');
-      let html = '';
-      
-      bytes.forEach((byte, index) => {
-        const cls = index === highlightIndex ? 'highlight' : '';
-        html += `<span class="hex-byte ${cls}">${byte}</span>`;
-      });
-      
-      $(this).html(html);
-    });
-    
-    // Initialize tabs
-    const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
-    tabEls.forEach(tabEl => {
-      tabEl.addEventListener('shown.bs.tab', event => {
-        // You could add analytics or other tab change logic here
-      });
-    });
-  });
-  </script>
 </body>
 </html>

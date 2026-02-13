@@ -1977,147 +1977,11 @@ def download_scan_result():
         return redirect(url_for('file_scan_page'))
 
 
-@app.route('/ioc-scan')
-@login_required
-def ioc_scan_page():
-    return render_template(
-        'ioc_scan.html',
-        os=get_os(),
-        ip=get_lan_ip(),
-        time=datetime.now().strftime("%H:%M:%S")
-    )
-
-@app.route('/upload-ioc-file', methods=['POST'])
-@login_required
-def upload_ioc_file():
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'success': False, 'message': 'No selected file'}), 400
-    
-    # Check file size
-    file.seek(0, os.SEEK_END)
-    file_size = file.tell()
-    file.seek(0)
-    if file_size > MAX_FILE_SIZE:
-        return jsonify({'success': False, 'message': 'File size exceeds maximum allowed (100MB)'}), 400
-        
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(upload_path)
-        
-        # Scan the file without saving results
-        scanner = IOCScanner()
-        results = scanner.scan_file(upload_path)
-        
-        # Clean up
-        os.remove(upload_path)
-        
-        return jsonify({
-            'success': True,
-            'results': results
-        })
-        
-    return jsonify({'success': False, 'message': 'Invalid file type'}), 400
-
-
-
-@app.route('/perform-ioc-scan', methods=['POST'])
-@login_required
-def perform_ioc_scan():
-    data = request.get_json()
-    path = data.get('path')
-    remote_host = data.get('remote_host')
-    username = data.get('username')
-    password = data.get('password')
-    
-    def generate():
-        scanner = IOCScanner()
-        
-        if remote_host:
-            # Remote scanning
-            yield "data: 🔍 Starting remote IOC scan...\n\n"
-            try:
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(remote_host, username=username, password=password)
-                
-                sftp = ssh.open_sftp()
-                remote_files = sftp.listdir(path)
-                
-                for file in remote_files:
-                    remote_path = f"{path}/{file}" if not path.endswith('/') else f"{path}{file}"
-                    try:
-                        # Download file temporarily
-                        local_path = f"/tmp/{file}"
-                        sftp.get(remote_path, local_path)
-                        
-                        # Scan file
-                        results = scanner.scan_file(local_path)
-                        yield f"data: 📄 {file} - Threat Level: {results['threat_level']}\n\n"
-                        if results.get('yara_matches'):
-                            for match in results['yara_matches']:
-                                yield f"data: ⚠️ YARA Rule Match: {match['rule']}\n\n"
-                        if results.get('ioc_matches'):
-                            for match in results['ioc_matches']:
-                                yield f"data: ⚠️ Known IOC Match: {match['value']}\n\n"
-                                
-                        # Clean up
-                        os.remove(local_path)
-                    except Exception as e:
-                        yield f"data: ❌ Error scanning {file}: {str(e)}\n\n"
-                        continue
-                        
-                ssh.close()
-                yield "data: ✅ Remote IOC scan completed\n\n"
-            except Exception as e:
-                yield f"data: ❌ Remote scan failed: {str(e)}\n\n"
-        else:
-            # Local scanning
-            yield "data: 🔍 Starting local IOC scan...\n\n"
-            try:
-                if os.path.isfile(path):
-                    results = scanner.scan_file(path)
-                    yield f"data: 📄 {os.path.basename(path)} - Threat Level: {results['threat_level']}\n\n"
-                    if results.get('yara_matches'):
-                        for match in results['yara_matches']:
-                            yield f"data: ⚠️ YARA Rule Match: {match['rule']}\n\n"
-                    if results.get('ioc_matches'):
-                        for match in results['ioc_matches']:
-                            yield f"data: ⚠️ Known IOC Match: {match['value']}\n\n"
-                elif os.path.isdir(path):
-                    for root, dirs, files in os.walk(path):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            try:
-                                results = scanner.scan_file(file_path)
-                                if results['threat_level'] != 'None':
-                                    yield f"data: 📄 {file} - Threat Level: {results['threat_level']}\n\n"
-                                    if results.get('yara_matches'):
-                                        for match in results['yara_matches']:
-                                            yield f"data: ⚠️ YARA Rule Match: {match['rule']}\n\n"
-                                    if results.get('ioc_matches'):
-                                        for match in results['ioc_matches']:
-                                            yield f"data: ⚠️ Known IOC Match: {match['value']}\n\n"
-                            except Exception as e:
-                                yield f"data: ❌ Error scanning {file}: {str(e)}\n\n"
-                                continue
-                yield "data: ✅ Local IOC scan completed\n\n"
-            except Exception as e:
-                yield f"data: ❌ Local scan failed: {str(e)}\n\n"
-                
-    return Response(generate(), mimetype='text/event-stream')
 
 
 
 
-
-
-
-@app.route('/cfg-analysis')
+@app.route('/analyze-cfg')
 @login_required
 def cfg_analyze_page():
     return render_template(
@@ -2127,22 +1991,36 @@ def cfg_analyze_page():
         time=datetime.now().strftime("%H:%M:%S")
     )
 
+# Replace this route in your Flask app:
+
 @app.route('/analyze-cfg', methods=['POST'])
 @login_required
 def analyze_cfg():
-    """Endpoint for analyzing control-flow obfuscation"""
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
-        
-    file = request.files['file']
+    """Endpoint for analyzing control-flow obfuscation with disassembly"""
+    if 'cfgfile' not in request.files:
+        flash("❌ No file uploaded", "danger")
+        return redirect(url_for('cfg_analyze_page'))
+    
+    file = request.files['cfgfile']
     if file.filename == '':
-        return jsonify({'success': False, 'message': 'No selected file'}), 400
-        
+        flash("⚠ No file selected", "warning")
+        return redirect(url_for('cfg_analyze_page'))
+    
+    # Check file extension
+    if not file.filename.lower().endswith(('.exe', '.dll', '.sys')):
+        flash("❌ Only PE files (EXE, DLL, SYS) are supported for CFG analysis", "danger")
+        return redirect(url_for('cfg_analyze_page'))
+    
     try:
         # Save the uploaded file temporarily
-        temp_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'cf_analysis')
+        temp_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'cfg_analysis')
         os.makedirs(temp_dir, exist_ok=True)
-        file_path = os.path.join(temp_dir, secure_filename(file.filename))
+        
+        # Add timestamp to filename to avoid collisions
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_filename = secure_filename(file.filename)
+        unique_filename = f"{timestamp}_{safe_filename}"
+        file_path = os.path.join(temp_dir, unique_filename)
         file.save(file_path)
         
         # Initialize the CFG analyzer with enhanced capabilities
@@ -2151,7 +2029,17 @@ def analyze_cfg():
         # Perform the analysis
         results = analyzer.analyze_file(file_path)
         
-        # Clean up
+        # Save results to JSON for download
+        result_filename = f"cfg_result_{timestamp}_{uuid.uuid4().hex[:6]}.json"
+        result_path = os.path.join(UPLOADS, result_filename)
+        
+        with open(result_path, 'w') as f:
+            json.dump(results, f, indent=4, default=str)
+        
+        # Store in session for download
+        session['latest_cfg_result'] = result_filename
+        
+        # Clean up uploaded file
         os.remove(file_path)
         
         # Render results in template
@@ -2159,16 +2047,50 @@ def analyze_cfg():
             'cfg_results.html',
             results=results,
             filename=file.filename,
+            result_file=result_filename,
             os=get_os(),
             ip=get_lan_ip(),
-            time=datetime.now().strftime("%H:%M:%S")
+            time=datetime.now().strftime("%H:%M:%S"),
+            disassembly_count=len(results.get('disassembly', [])),
+            dispatcher_count=results.get('cfg_analysis', {}).get('statistics', {}).get('total_dispatchers', 0)
         )
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Analysis failed: {str(e)}'
-        }), 500
+        # Clean up if something went wrong
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.remove(file_path)
+        flash(f"❌ Error analyzing file: {str(e)}", "danger")
+        return redirect(url_for('cfg_analyze_page'))
+
+# Add download route for CFG results
+@app.route('/download-cfg-result')
+@login_required
+def download_cfg_result():
+    if 'latest_cfg_result' not in session:
+        flash("No CFG analysis result available for download", "warning")
+        return redirect(url_for('cfg_analyze_page'))
+    
+    result_filename = session['latest_cfg_result']
+    result_path = os.path.join(UPLOADS, result_filename)
+    
+    if not os.path.exists(result_path):
+        flash("Result file not found", "danger")
+        return redirect(url_for('cfg_analyze_page'))
+    
+    try:
+        return send_file(
+            result_path,
+            as_attachment=True,
+            download_name=f"cfg_analysis_{datetime.now().strftime('%Y%m%d')}.json",
+            mimetype='application/json'
+        )
+    except Exception as e:
+        flash(f"Error downloading file: {str(e)}", "danger")
+        return redirect(url_for('cfg_analyze_page'))
+
+
+
+
 
 class EnhancedCFGAnalyzer:
     """Enhanced CFG analyzer with PE analysis and disassembly capabilities"""
