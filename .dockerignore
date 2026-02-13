@@ -1,0 +1,18 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv
+.env
+.git
+.gitignore
+README.md
+Dockerfile
+docker-compose.yml
+.vscode
+.idea
+*.log
+uploads/
+scan_results/
+ioc_rules/yara/  # Don't ignore if you have custom rules

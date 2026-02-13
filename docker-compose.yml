@@ -1,0 +1,49 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  clamnet:
+    build: .
+    container_name: clamnet
+    ports:
+      - "5005:5005"
+    volumes:
+      # Persistent data volumes
+      - clamnet_uploads:/app/uploads
+      - clamnet_results:/app/scan_results
+      - clamnet_ioc:/app/ioc_rules
+      # Don't mount over maldet installation - mount config/data only
+      - clamnet_maldet_data:/usr/local/maldetect/data
+      - clamnet_maldet_logs:/usr/local/maldetect/logs
+      # Mount config files if needed
+      - ./config/clamav:/etc/clamav:ro
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+      - PYTHONUNBUFFERED=1
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+volumes:
+  clamnet_uploads:
+    name: clamnet_uploads
+  clamnet_results:
+    name: clamnet_results
+  clamnet_ioc:
+    name: clamnet_ioc
+  clamnet_maldet_data:
+    name: clamnet_maldet_data
+  clamnet_maldet_logs:
+    name: clamnet_maldet_logs
