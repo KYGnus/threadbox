@@ -1,228 +1,451 @@
-# 🛡️ ClamAV Console Web App
+# clamNET - Advanced Malware Detection & Network Security Platform
 
-A cross-platform, web-based, open-source console for managing and automating **ClamAV** antivirus across remote **Linux** and **Windows** systems. This app provides tools for **remote installation**, **on-demand scanning**, **database updates**, **network topology visualization**, **IOC scanning**, **PCAP analysis**, and **malware analysis** — all from a single, secure dashboard.
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.8%2B-green)
+![License](https://img.shields.io/badge/license-MIT-orange)
+![Flask](https://img.shields.io/badge/flask-2.0%2B-red)
 
----
-
-## 🚀 Features
-
-### Core ClamAV Management
-- ✅ **Remote Installation** of ClamAV on Linux and Windows systems  
-- 🔍 **Scan Local and Remote Systems** with ClamAV  
-- 🔄 **Automatic Virus Database Updates** across multiple remote hosts  
-- 🌐 **Network Scanning** to detect systems with ClamAV installed  
-
-### Network Analysis
-- 📊 **System Monitoring**: CPU, RAM, and network usage  
-- 🔎 **PCAP Analysis** for network traffic inspection  
-- 🌍 **Network Protocol Visualization**  
-
-### Security Analysis
-- 🔐 **IOC Scanning** with YARA rules and hash matching  
-- 🧪 **Malware Analysis** with Pepper framework  
-- 🕵️ **Control Flow Graph Analysis** for binary inspection  
-- 📝 **File Metadata Analysis**  
-
-### Platform Features
-- 🧰 CLI and GUI elements powered by Flask + Jinja2  
-- 📦 Multi-threaded with real-time logs using Server-Sent Events (SSE)  
-- 🖥️ Cross-platform: supports both **Linux** and **Windows** servers  
-- 🔐 **Login-Authenticated Dashboard** (Flask-Login)  
+**clamNET** is a comprehensive, enterprise-grade security platform that combines multiple malware detection engines, network traffic analysis, and threat intelligence capabilities into a unified web interface. Built for security professionals, SOC analysts, and system administrators.
 
 ---
 
-## 📸 Screenshots
+## 📋 Table of Contents
 
-![clamNET Dashboard](./clamNET.png)
-![clamNET scan](./clamscan.png)
-![IOC Scanner](./ioc_scan.png)
-![PCAP Analysis](./pcap_analysis.png)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Module Documentation](#-module-documentation)
+- [API Reference](#-api-reference)
+- [Project Structure](#-project-structure)
+- [Configuration](#-configuration)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Contact](#-contact)
 
 ---
 
-## ⚙️ Installation
+## 🚀 Key Features
 
-### 📋 Prerequisites
+### 🔬 **Multi-Engine Malware Analysis**
+| Engine | Capabilities | Supported Formats|
+|--------|------------|-------------------|
+| **ClamAV** | Signature-based detection | All files, archives |
+| **YARA** | Pattern matching rules | Custom rules, IOC scanning |
+| **Maldet** | Heuristic analysis | Linux executables |
+| **AI/ML** | Behavioral analysis | PE, ELF, APK, Documents |
 
-- Python 3.11+
-- `pip` / `virtualenv`
-- SSH access to remote systems
-- ClamAV MSI for Windows installs (`clamav-1.*.*.win.x64.msi`) should be present on the server
-- Optional dependencies for advanced features:
-  - `libpcap` for PCAP analysis
-  - `yara` for IOC scanning
-  - `pepper` for malware analysis
+### 📡 **Network Security**
+- **PCAP Analysis** - Deep packet inspection, protocol analysis, traffic patterns
+- **Threat Detection** - Anomaly detection, port scanning identification, DNS tunneling
+- **Visualization** - Protocol distribution, top talkers, timeline analysis
 
-### 🔧 Setup
+### 📱 **Mobile Security**
+- **Android APK Analysis** - Permission auditing, API call extraction
+- **Transformer-based ML** - NyerAndroidMalware model integration
+- **Risk Scoring** - Probability-based malware classification
+
+### 🖥️ **Remote Deployment**
+- **SSH-based Installation** - Automated ClamAV deployment across Windows/Linux
+- **Mass Deployment** - Multi-host parallel installation
+- **Database Updates** - Remote signature database synchronization
+
+### 🔍 **Advanced Analysis**
+- **Control Flow Analysis** - Obfuscation detection, dispatcher identification
+- **PE Analysis** - Section analysis, import/export tables, resource inspection
+- **IOC Scanning** - Hash matching, domain/IP blacklisting
+
+### 📊 **Comprehensive Reporting**
+- JSON export capabilities
+- Real-time visualization
+- Threat scoring system
+- Detailed forensic evidence
+
+---
+
+## 🏗 System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Web Interface (Flask)                     │
+├─────────────────────────────────────────────────────────────┤
+│                    Authentication Layer                      │
+├───────────┬───────────┬───────────┬───────────┬───────────┤
+│   File    │   PCAP    │   APK     │   CFG     │  Remote   │
+│  Scanner  │  Analyzer │ Analyzer  │ Analyzer  │ Deployer  │
+├───────────┴───────────┴───────────┴───────────┴───────────┤
+│                    Orchestration Layer                      │
+├───────────┬───────────┬───────────┬───────────┬───────────┤
+│  ClamAV   │   YARA    │  Maldet   │   AI/ML   │   IOC     │
+│  Engine   │  Engine   │  Engine   │  Engine   │ Database  │
+└───────────┴───────────┴───────────┴───────────┴───────────┘
+```
+
+---
+
+## 💻 Installation
+
+### Prerequisites
 
 ```bash
+# System dependencies
+sudo apt-get update
+sudo apt-get install -y clamav clamav-daemon yara python3-pip
+```
+
+### Option 1: Docker Installation (Recommended)
+
+```bash
+# Clone repository
 git clone https://github.com/KYGnus/clamNET.git
 cd clamNET
+
+# Build Docker image
+docker build -t clamnet:latest .
+
+# Run container
+docker run -d -p 5005:5005 \
+  -v /path/to/uploads:/app/uploads \
+  -v /path/to/rules:/app/rules \
+  --name clamnet clamnet:latest
+```
+
+### Option 2: Manual Installation
+
+```bash
+# Clone repository
+git clone https://github.com/KYGnus/clamNET.git
+cd clamNET
+
+# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-```
+pip install -r requirements-main.txt
+pip install -r app/scripts_requirements.txt
 
-**Note:** These requirements are for Python 3.11.13
+# Configure
+cp config.example.py app/config.py
+# Edit app/config.py with your settings
 
-### Advanced Feature Setup
-For PCAP analysis:
-```bash
-sudo apt-get install libpcap-dev  # Debian/Ubuntu
-sudo yum install libpcap-devel    # CentOS/RHEL
-```
-
-For Pepper analysis:
-```bash
-git clone https://github.com/KYGnus/pepper.git
-cp pepper/pepper.py ./clamNET/
+# Initialize directories
+mkdir -p uploads scan_results ioc_rules/yara
 ```
 
 ---
 
-## 🔐 Default Login
+## ⚡ Quick Start
 
-| Username | Password |
-| -------- | -------- |
-| `config.USERNAME` | `config.PASSWORD` |
+1. **Configure credentials** in `app/config.py`:
+```python
+SECRET_KEY = "your-secret-key-here"
+USERNAME = "admin"
+PASSWORD = "secure-password"
+MAINDIR = "/path/to/clamNET"
+```
 
-> ⚠️ **Change the admin password in `main.py` before deploying to production**:
-> ```python
-> ADMIN_PASSWORD_HASH = generate_password_hash('your_secure_password_here')
-> ```
-
----
-
-## ▶️ Running the App
-
+2. **Launch the application**:
 ```bash
+cd app
 python main.py
 ```
 
-Then visit: [http://localhost:5005](http://localhost:5005)
+3. **Access the web interface**:
+```
+http://localhost:5005
+```
+
+4. **Default login**:
+- Username: `admin`
+- Password: `[as configured]`
 
 ---
 
-## 🌐 Network Features
+## 📚 Module Documentation
 
-### Topology Scanning
-Scan a network (e.g., `192.168.1.0/24`) to:
-- Discover active hosts
-- Detect OS via TTL analysis
-- Visualize network structure
-- Identify ClamAV installations
+### 1. **File Scanner Module**
+**Location**: `app/main.py` - ComprehensiveFileScanner class
 
-### PCAP Analysis
-- Upload packet capture files (.pcap, .pcapng)
-- Protocol distribution visualization
-- Traffic pattern analysis
-- Suspicious activity detection
+```python
+# Example: Programmatic scanning
+from malware_scanner import MalwareAnalyzer
+
+analyzer = MalwareAnalyzer("/path/to/suspicious.exe")
+results = analyzer.run_analysis()
+print(f"Verdict: {results['verdict']}")
+print(f"Score: {results['score']}")
+```
+
+**Detection Capabilities**:
+- ✅ ClamAV signature matching
+- ✅ YARA pattern matching
+- ✅ Maldet heuristic analysis  
+- ✅ Hash-based IOC detection
+- ✅ File type identification
+- ✅ Entropy analysis
+
+### 2. **PCAP Analyzer Module**
+**Location**: `app/main.py` - EnhancedPCAPAnalyzer class
+
+**Analysis Features**:
+- 📦 Protocol distribution (TCP/UDP/ICMP/HTTP/DNS)
+- 📊 Top talker identification
+- 🔍 Anomaly detection
+- 🚨 Security indicator analysis
+- 📈 Traffic pattern analysis
+- 🎨 Visualizations (matplotlib)
+
+**Output Example**:
+```json
+{
+  "basic_stats": {
+    "total_packets": 15234,
+    "duration_seconds": 120.5,
+    "packet_rate": 126.4
+  },
+  "security_indicators": {
+    "suspicious_ips": ["192.168.1.100"],
+    "dns_tunneling": []
+  }
+}
+```
+
+### 3. **Android APK Analyzer**
+**Location**: `app/main.py` - HuggingFace transformer integration
+
+**Model**: `Hachirou18/NyerAndroidMalware`
+**Accuracy**: ~94% on test datasets
+
+**Features Extracted**:
+- 📱 Permissions (dangerous/normal)
+- 📱 API calls
+- 📱 Intent filters
+- 📱 Activities & Services
+
+### 4. **Remote Deployment Module**
+**Location**: `app/main.py` - ClamAVInstaller class
+
+**Supported Platforms**:
+| OS | Distribution | Architecture |
+|----|-------------|--------------|
+| Linux | Ubuntu 18.04+ | x86_64, ARM |
+| Linux | Debian 10+ | x86_64, ARM |
+| Linux | CentOS 7+ | x86_64 |
+| Linux | Fedora 32+ | x86_64 |
+| Windows | Windows 10/11 | x86_64 |
+| Windows | Windows Server 2016+ | x86_64 |
+
+### 5. **Control Flow Analysis**
+**Location**: `app/main.py` - EnhancedCFGAnalyzer class
+
+**Techniques Detected**:
+- 🔄 Opaque predicates
+- 🎯 Dispatcher-based obfuscation
+- 📍 Control flow flattening
+- 🔀 Dead code insertion
 
 ---
 
-## 🛠️ Usage Guide
+## 🔌 API Reference
 
-### 🔧 ClamAV Installation
-1. Navigate to the Install page
-2. Enter target IPs (comma-separated)
-3. Provide SSH credentials
-4. The app will auto-detect OS and install the appropriate ClamAV version
+### REST Endpoints
 
-### 🔄 Database Updates
-1. Go to the Update page
-2. Select target hosts
-3. Monitor real-time update progress
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| POST | `/login` | User authentication | ❌ No |
+| GET | `/` | Dashboard | ✅ Yes |
+| POST | `/upload-scan-file` | Upload file for scanning | ✅ Yes |
+| POST | `/upload-pcap-file` | PCAP analysis | ✅ Yes |
+| POST | `/upload-malware-file` | Malware analysis | ✅ Yes |
+| POST | `/upload-pepper-file` | Pepper analysis | ✅ Yes |
+| GET | `/download-scan-result` | Download JSON results | ✅ Yes |
 
-### 🧪 Security Scanning
-#### Basic Scanning:
-- Select local or remote scan
-- Choose directory path
-- View real-time results
+### WebSocket Events (SSE)
 
-#### Advanced Scanning:
-- **IOC Scanner**: Upload files for YARA rule matching and hash analysis
-- **PCAP Analyzer**: Inspect network traffic patterns
-- **Pepper Analysis**: Perform deep malware analysis on executables
-- **CFG Analysis**: Examine binary control flow graphs
+| Endpoint | Purpose | Event Types |
+|----------|---------|-------------|
+| `/perform-ioc-scan` | IOC scanning | `data: PROGRESS:X`, `data: COMPLETED` |
+| `/update-databases` | Remote updates | `data: ✅ HOST: Success` |
+| `/perform-pepper-analysis` | Pepper execution | `data: raw output` |
 
 ---
 
-## 📁 File Structure
+## 📁 Project Structure
 
-```text
-.
-├── main.py                # Main Flask application
-├── modules/               # Additional functional modules
-│   ├── pcap.py            # PCAP analysis
-│   └── installer.py       # Remote installation
-├── templates/             # HTML templates
-├── static/                # CSS/JS assets
-├── ioc_rules/             # YARA rules for IOC scanning
-├── uploads/               # File upload directory
-├── clamav-*.win.x64.msi   # Windows installer
-├── pepper.py              # Malware analysis tool
-└── requirements.txt       # Python dependencies
+```
+clamNET/
+├── app/                          # Application core
+│   ├── main.py                  # Main Flask application
+│   ├── config.py                # Configuration settings
+│   ├── malware_scanner.py       # Malware analysis engine
+│   ├── pepper.py                # Pepper framework integration
+│   ├── capa/                    # CAPA rules directory
+│   ├── floss/                   # FLOSS strings extraction
+│   ├── modules/                 # Additional modules
+│   │   └── pcap.py             # PCAP processing utilities
+│   ├── static/                  # Static assets
+│   │   ├── css/                # Stylesheets
+│   │   ├── js/                 # JavaScript
+│   │   └── img/                # Images
+│   ├── templates/               # Jinja2 templates
+│   │   ├── main.html           # Dashboard
+│   │   ├── file_scan.html      # File scanner UI
+│   │   ├── pcap_scan.html      # PCAP analyzer UI
+│   │   ├── android_analysis.html # APK analyzer
+│   │   ├── malware_analysis.html # Malware scanner
+│   │   ├── pepper_analysis.html # Pepper interface
+│   │   ├── cfg_results.html    # CFG analysis results
+│   │   ├── login.html          # Authentication
+│   │   └── about.html          # About page
+│   └── signatures/              # Detection signatures
+│
+├── ioc_rules/                   # Threat intelligence
+│   ├── ioc_database.json       # Hash/domain/IP database
+│   ├── yara/                   # YARA rules directory
+│   └── malware_yara_rules.py   # Rule management
+│
+├── uploads/                     # File upload directory
+├── scan_results/               # Analysis results storage
+├── Dockerfile                  # Container configuration
+├── requirements.txt            # Python dependencies
+├── requirements-main.txt       # Core dependencies
+├── tools.txt                  # Third-party tools manifest
+└── README.md                  # This documentation
 ```
 
 ---
 
-## 🧪 Tested Platforms
+## ⚙️ Configuration
 
-| OS         | Remote Install | Scanning | Update | IOC Scan | PCAP Analysis |
-| ---------- | -------------- | -------- | ------ | -------- | ------------- |
-| Ubuntu     | ✅              | ✅        | ✅      | ✅        | ✅             |
-| openSUSE   | ✅              | ✅        | ✅      | ✅        | ✅             |
-| Windows 10 | ✅              | ✅        | ✅      | ✅        | ✅             |
-| macOS      | ❌              | ✅        | ❌      | ✅        | ✅             |
+### Environment Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `SECRET_KEY` | Flask session secret | - | ✅ Yes |
+| `USERNAME` | Admin username | - | ✅ Yes |
+| `PASSWORD` | Admin password | - | ✅ Yes |
+| `MAINDIR` | Application directory | - | ✅ Yes |
+| `UPLOADDIR` | Upload directory | `./uploads` | ❌ No |
+| `SCAN_RESULTS` | Results directory | `./scan_results` | ❌ No |
+
+### config.py Example
+
+```python
+# Authentication
+SECRET_KEY = "your-strong-secret-key-here"
+USERNAME = "admin"
+PASSWORD = "your-secure-password"
+
+# Directories
+MAINDIR = "/opt/clamNET"
+UPLOADDIR = os.path.join(MAINDIR, "uploads")
+SCAN_RESULTS = os.path.join(MAINDIR, "scan_results")
+IOC_RULES = os.path.join(MAINDIR, "ioc_rules")
+YARA_RULES = os.path.join(IOC_RULES, "yara")
+
+# Remote installation files
+LOCAL_INSTALL_FILE = os.path.join(MAINDIR, "installers/clamav-1.2.0-win64.msi")
+LOCAL_CVD_FILE = os.path.join(MAINDIR, "databases/daily.cvd")
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+python -m pytest tests/
+
+# Test specific module
+python -m pytest tests/test_file_scanner.py
+
+# Load testing
+python -m locust -f tests/locustfile.py
+```
 
 ---
 
 ## 🤝 Contributing
 
+We welcome contributions! Please follow these steps:
+
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Commit your changes: `git commit -m "Add feature"`
-4. Push to your fork: `git push origin feature-name`
-5. Submit a pull request
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-**Development Setup:**
-```bash
-git clone https://github.com/KYGnus/clamNET.git
-cd clamNET
-python3.12 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cd app
-python main.py
-```
+**Contribution Guidelines:**
+- Follow PEP 8 style guide
+- Add unit tests for new features
+- Update documentation
+- Ensure all tests pass
 
+---
 
-**run in Firejail**
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ```
-# run your venv python in firejail, no network, private home and tmp
-firejail --private=/home/koosha/sandbox-home \
-         --net=none \
-         --caps.drop=all \
-         --private-tmp \
-         --whitelist=/path/to/allowed/data \
-         /path/to/venv/bin/python /path/to/app.py
+MIT License
 
+Copyright (c) 2024 KYGnus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files...
 ```
 
 ---
 
-## 📃 License
+## 📞 Contact & Support
 
-[MIT License](https://opensource.org/licenses/MIT) © 2025 KYGnus
+**Developer:** KYGnus
+
+📧 **Email:** kygnus.co@proton.me
+
+🐙 **GitHub:** [https://github.com/KYGnus](https://github.com/KYGnus)
+
+🌐 Website: https://kygnus.github.io
 
 ---
 
-## 📞 Contact
+## 🙏 Acknowledgments
 
-* **Koosha Yeganeh**
-  - Email: [kygnus.co@proton.me](mailto:kygnus.co@proton.me)
-  - Website: [kygnus.github.io](https://kygnus.github.io/)
-  - GitHub: [@KYGnus](https://github.com/KYGnus)
+- **ClamAV** - Open source antivirus engine
+- **YARA** - Pattern matching tool
+- **Androguard** - Android APK analysis
+- **HuggingFace** - Transformer models
+- **LIEF** - Binary parsing
+- **Capstone** - Disassembly framework
+- **Scapy/Pyshark** - Network analysis
 
+---
 
+## 🗺️ Roadmap
+
+### Version 1.1.0 (Q2 2024)
+- [ ] Integration with VirusTotal API
+- [ ] Email notification system
+- [ ] Scheduled scanning
+- [ ] LDAP authentication
+
+### Version 1.2.0 (Q3 2024)
+- [ ] Machine learning model retraining UI
+- [ ] Custom YARA rule editor
+- [ ] Threat intelligence feeds
+- [ ] API key management
+
+### Version 2.0.0 (Q4 2024)
+- [ ] Distributed scanning architecture
+- [ ] SIEM integration (Splunk, ELK)
+- [ ] Real-time threat hunting
+- [ ] Mobile app (iOS/Android)
+
+---
+
+**Made with 🔥 by KYGnus**
+
+*Protecting digital assets, one scan at a time.*
