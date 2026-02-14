@@ -1,0 +1,12 @@
+include CHANGELOG.rst
+include CONTRIBUTING.rst
+include LICENSE
+include README.rst
+include tox.ini
+graft docs
+prune docs/build
+graft src/ssdeep-lib
+graft tests
+
+global-exclude __pycache__
+global-exclude *.py[co]
