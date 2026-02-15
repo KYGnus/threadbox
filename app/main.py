@@ -85,7 +85,8 @@ ALLOWED_EXTENSIONS = {
     'txt', 'pdf', 'doc', 'docx', 'xls', 'md', 'conf',
     'xlsx', 'ppt', 'pptx', 'exe', 'dll', 'js', 'config',
     'vbs', 'ps1', 'zip', 'rar', '7z', 'apk',
-    'jpg', 'jpeg', 'png', 'jfif', 'heic', 'pcap', 'pcapng',
+    'jpg', 'jpeg', 'png', 'jfif', 'heic', 'pcap', 'pcapng','webp',
+    'html', 'css', 'rs', 'csv', 'deb', 'rpm', 'tar', 'gz',
     'php', 'asp', 'aspx', 'jsp', 'py', 'rb', 'pl', 'sh', 'bat', 'cmd',
     'elf', 'bin', 'deb', 'rpm', 'iso', 'img'
 }
@@ -112,7 +113,7 @@ IOC_RULES_DIR  = os.path.join(config.IOC_RULES)
 os.makedirs(IOC_RULES_DIR, exist_ok=True)
 
 
-YARA_RULES_DIR  = os.path.join(config.YARA_RULES)  
+YARA_RULES_DIR  = os.path.join(config.YARA_RULES_DIR)  
 os.makedirs(YARA_RULES_DIR, exist_ok=True)
 
 
@@ -2762,27 +2763,162 @@ def download_pepper_result():
 
 
 def extract_apk_features(apk_path):
+    """Extract permissions and API calls from APK using androguard"""
     try:
+        print(f"Analyzing APK: {apk_path}")
+        
+        # Analyze APK with androguard
         a, d, dx = AnalyzeAPK(apk_path)
-        permissions = a.get_permissions()
-        api_calls = [c.get_name() for method in d.get_methods() for c in method.get_xref_to()]
+        
+        # Extract permissions
+        permissions = []
+        if a:
+            print("Extracting permissions...")
+            # Get all permissions from the APK
+            all_permissions = a.get_permissions()
+            if all_permissions:
+                permissions = list(all_permissions)
+                print(f"✅ Found {len(permissions)} permissions")
+                for p in permissions[:10]:  # Show first 10
+                    print(f"   - {p}")
+            else:
+                print("⚠️ No permissions found in APK manifest")
+        
+        # Extract API calls - FIXED for current androguard version
+        api_calls = []
+        try:
+            print("Extracting API calls...")
+            
+            # In current androguard, 'd' is a list of DalvikVMFormat objects
+            # We need to iterate through each DalvikVMFormat object
+            if isinstance(d, list):
+                print(f"Found {len(d)} Dalvik VM objects")
+                for vm in d:
+                    try:
+                        # Get all classes from this VM
+                        classes = vm.get_classes()
+                        print(f"  VM has {len(classes)} classes")
+                        
+                        # Extract method names from classes
+                        for cls in classes:
+                            try:
+                                for method in cls.get_methods():
+                                    try:
+                                        method_name = method.get_name()
+                                        if method_name and len(method_name) > 2:  # Filter out tiny names
+                                            api_calls.append(method_name)
+                                    except:
+                                        continue
+                            except:
+                                continue
+                    except Exception as e:
+                        print(f"Error processing VM: {e}")
+                        continue
+            else:
+                # Handle case where d is not a list (older androguard versions)
+                print("d is not a list, trying alternative method")
+                try:
+                    classes = d.get_classes()
+                    for cls in classes:
+                        for method in cls.get_methods():
+                            method_name = method.get_name()
+                            if method_name:
+                                api_calls.append(method_name)
+                except:
+                    pass
+            
+            # Also try to get external API calls via xrefs
+            try:
+                print("Analyzing cross-references...")
+                all_methods = dx.get_methods()
+                print(f"Found {len(all_methods)} methods in cross-references")
+                
+                for method in all_methods[:500]:  # Limit to first 500
+                    try:
+                        for called_method, _ in method.get_xref_to():
+                            try:
+                                method_name = called_method.get_name()
+                                if method_name and len(method_name) > 2:
+                                    api_calls.append(method_name)
+                            except:
+                                continue
+                    except:
+                        continue
+            except Exception as e:
+                print(f"Error with cross-references: {e}")
+            
+            # Remove duplicates while preserving order
+            api_calls = list(dict.fromkeys(api_calls))
+            print(f"✅ Found {len(api_calls)} unique API calls")
+            
+            # Show top API calls
+            if api_calls:
+                from collections import Counter
+                print("Top 10 API calls:")
+                for call, count in Counter(api_calls).most_common(10):
+                    print(f"   - {call} ({count} times)")
+            
+        except Exception as e:
+            print(f"Error extracting API calls: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Create features text for the model
         features_text = " ".join(permissions + api_calls)
+        print(f"Created features text with {len(features_text)} characters")
+        
         return permissions, api_calls, features_text
+        
     except Exception as e:
         print(f"Error analyzing APK: {e}")
+        import traceback
+        traceback.print_exc()
         return [], [], ""
+    
+
+
+
 
 # Predict malware
 def predict_malware(features_text):
-    if not features_text:
-        return "Error", 0
-    inputs = tokenizer(features_text, return_tensors="pt", truncation=True, padding=True)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = torch.softmax(outputs.logits, dim=1)
-        pred = torch.argmax(probs).item()
-        probability = round(probs[0][pred].item() * 100, 2)
-    return "Malware" if pred == 1 else "Benign", probability
+    """Predict if APK is malware using the transformer model"""
+    try:
+        if not features_text or len(features_text.strip()) == 0:
+            print("Warning: Empty features text")
+            return "Benign", 0.0
+        
+        print(f"Predicting with features text length: {len(features_text)}")
+        
+        # Truncate if too long (model has max length)
+        if len(features_text) > 512:
+            features_text = features_text[:512]
+            print(f"Truncated to 512 characters")
+        
+        # Tokenize
+        inputs = tokenizer(features_text, 
+                          return_tensors="pt", 
+                          truncation=True, 
+                          padding=True,
+                          max_length=512)
+        
+        print("Tokenization complete")
+        
+        # Predict
+        with torch.no_grad():
+            outputs = model(**inputs)
+            probs = torch.softmax(outputs.logits, dim=1)
+            pred = torch.argmax(probs).item()
+            probability = round(probs[0][pred].item() * 100, 2)
+            
+        print(f"Prediction: {'Malware' if pred == 1 else 'Benign'} ({probability}%)")
+        
+        return "Malware" if pred == 1 else "Benign", probability
+        
+    except Exception as e:
+        print(f"Error in prediction: {e}")
+        import traceback
+        traceback.print_exc()
+        return "Error", 0.0
 
 
 
@@ -2975,13 +3111,29 @@ def android_analysis():
                 # Predict malware
                 result, probability = predict_malware(features_text)
 
-                # Top 20 API calls
-                top_apis = [api for api, _ in Counter(api_calls).most_common(20)]
+                # Get top API calls (limit to 20)
+                from collections import Counter
+                if api_calls:
+                    api_counter = Counter(api_calls)
+                    top_apis = [api for api, _ in api_counter.most_common(20)]
+                else:
+                    top_apis = []
 
                 # Clean up uploaded file
                 os.remove(file_path)
 
-                # Render the report directly
+                # Determine risk level
+                if probability < 30:
+                    risk_level = "Low Risk"
+                    risk_color = "green"
+                elif probability < 70:
+                    risk_level = "Medium Risk"
+                    risk_color = "orange"
+                else:
+                    risk_level = "High Risk"
+                    risk_color = "red"
+
+                # Render the report
                 return render_template(
                     "android_report.html",
                     filename=filename,
@@ -2991,6 +3143,8 @@ def android_analysis():
                     api_calls=top_apis,
                     total_permissions=len(permissions),
                     total_api_calls=len(api_calls),
+                    risk_level=risk_level,
+                    risk_color=risk_color,
                     os=get_os(),
                     ip=get_lan_ip(),
                     time=datetime.now().strftime("%H:%M:%S")
@@ -3000,6 +3154,9 @@ def android_analysis():
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 flash(f"❌ Error analyzing APK: {str(e)}", "danger")
+                print(f"Error: {e}")
+                import traceback
+                traceback.print_exc()
                 return render_template('android_analysis.html', os=get_os(), ip=get_lan_ip(), time=datetime.now().strftime("%H:%M:%S"))
 
         flash("❌ Invalid file type. Please upload an .apk file.", "danger")
