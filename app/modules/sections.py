@@ -1,75 +1,99 @@
 import lief
 from . import colors
 
-lief.logging.disable()
+# Set logging level (compatible with different LIEF versions)
+if hasattr(lief.logging, "LEVEL"):
+    lief.logging.set_level(lief.logging.LEVEL.ERROR)
+elif hasattr(lief.logging, "Level"):
+    lief.logging.set_level(lief.logging.Level.ERROR)
+else:
+    lief.logging.disable()
 
-MEM_READ = 0x40000000
-MEM_WRITE = 0x80000000
-MEM_EXECUTE = 0x20000000
-CNT_CODE = 0x00000020
+# Compatibility for SECTION_CHARACTERISTICS
+try:
+    CHAR = lief.PE.Section.CHARACTERISTICS
+except AttributeError:
+    CHAR = lief.PE.SECTION_CHARACTERISTICS
 
+
+# print PE sections
 def get(malware, csv):
     print((colors.WHITE + "\n------------------------------- {0:^13}{1:3}".format(
         "SECTIONS", " -------------------------------") + colors.DEFAULT))
-    
     sec = 0
     susp_sec = 0
     format_str = "{:<35} {:<35}"
-    
     binary = lief.parse(malware)
-    
     for section in binary.sections:
         sec += 1
         print((colors.YELLOW + section.name + colors.DEFAULT))
-        print(format_str.format(colors.WHITE + "\tVirtual Address: " + colors.DEFAULT, str(section.virtual_address)))
-        print(format_str.format(colors.WHITE + "\tVirtual Size: " + colors.DEFAULT, str(section.virtual_size)))
-        print(format_str.format(colors.WHITE + "\tRaw Size: " + colors.DEFAULT, str(section.sizeof_raw_data)))
-        print(format_str.format(colors.WHITE + "\tEntropy: " + colors.DEFAULT, f"{section.entropy:.4f}"))
+        print((format_str.format(colors.WHITE + "\tVirtual Address: " +
+                                 colors.DEFAULT, str(section.virtual_address))))
+        print((format_str.format(colors.WHITE + "\tVirtual Size: " +
+                                 colors.DEFAULT, str(section.virtual_size))))
+        print((format_str.format(colors.WHITE + "\tRaw Size: " +
+                                 colors.DEFAULT, str(section.sizeof_raw_data))))
+        print((format_str.format(colors.WHITE + "\tEntropy: " +
+                                 colors.DEFAULT, str(section.entropy))))
 
-        if (section.characteristics & MEM_READ) != 0:
-            print(format_str.format(colors.WHITE + "\tReadable: " + colors.GREEN, "[" + '\u2713' + "]"))
+        if section.has_characteristic(CHAR.MEM_READ):
+            print((format_str.format(colors.WHITE + "\tReadable: " +
+                                     colors.GREEN, "[" + str('\u2713') + "]")))
         else:
-            print(format_str.format(colors.WHITE + "\tReadable: " + colors.RED, "[X]"))
+            print((format_str.format(colors.WHITE +
+                                     "\tReadable: " + colors.RED, "[X]")))
 
-        if (section.characteristics & MEM_WRITE) != 0:
-            print(format_str.format(colors.WHITE + "\tWritable: " + colors.GREEN, "[" + '\u2713' + "]"))
+        if section.has_characteristic(CHAR.MEM_WRITE):
+            print((format_str.format(colors.WHITE + "\tWritable: " +
+                                     colors.GREEN, "[" + str('\u2713') + "]")))
         else:
-            print(format_str.format(colors.WHITE + "\tWritable: " + colors.RED, "[X]"))
+            print((format_str.format(colors.WHITE +
+                                     "\tWritable: " + colors.RED, "[X]")))
 
-        if (section.characteristics & MEM_EXECUTE) != 0:
-            print(format_str.format(colors.WHITE + "\tExecutable: " + colors.GREEN, "[" + '\u2713' + "]"))
+        if section.has_characteristic(CHAR.MEM_EXECUTE):
+            print((format_str.format(colors.WHITE + "\tExecutable: " +
+                                     colors.GREEN, "[" + str('\u2713') + "]")))
         else:
-            print(format_str.format(colors.WHITE + "\tExecutable: " + colors.RED, "[X]"))
+            print((format_str.format(colors.WHITE +
+                                     "\tExecutable: " + colors.RED, "[X]")))
 
-        # Entropy-based suspicion
         if section.size == 0 or (0 < section.entropy < 1) or section.entropy > 7:
-            print(format_str.format(colors.WHITE + "\tSuspicious: " + colors.GREEN, "[" + '\u2713' + "]"))
+            print((format_str.format(colors.WHITE + "\tSuspicious:" +
+                                     colors.GREEN, "[" + str('\u2713') + "]")))
             susp_sec += 1
         else:
-            print(format_str.format(colors.WHITE + "\tSuspicious: " + colors.RED, "[X]"))
+            print((format_str.format(colors.WHITE +
+                                     "\tSuspicious: " + colors.RED, "[X]")))
 
-    # Suspicious section ratio based on entropy
-    print(colors.RED + "\n[-]" + colors.WHITE + " Suspicious section (entropy) ratio: " + colors.DEFAULT + f"{susp_sec}/{sec}")
-    csv.write(f"{susp_sec/sec:.2%},")
+    # suspicious section based on entropy
+    print((colors.RED + "\n[-]" + colors.WHITE + " Suspicious section (entropy) ratio:" + colors.DEFAULT + " %i/%i" %
+           (susp_sec, sec)))
+    csv.write(str(susp_sec / sec) + "%,")
 
-    # Suspicious section names detection
-    standardSectionNames = [".text", ".bss", ".rdata", ".data", ".idata", ".reloc", ".rsrc"]
+    # suspicious section names
+    standardSectionNames = [".text", ".bss", ".rdata",
+                            ".data", ".idata", ".reloc", ".rsrc"]
     suspiciousSections = 0
     for section in binary.sections:
-        if section.name not in standardSectionNames:
+        if not section.name in standardSectionNames:
             suspiciousSections += 1
-    print(colors.RED + "[-]" + colors.WHITE + " Suspicious section (name) ratio: " + colors.DEFAULT + f"{suspiciousSections}/{sec}")
-    csv.write(f"{suspiciousSections/sec:.2%},")
+    print((colors.RED + "[-]" + colors.WHITE + " Suspicious section (name) ratio:" + colors.DEFAULT + " %i/%i" %
+           (suspiciousSections, sec)))
+    csv.write(str(suspiciousSections / sec) + "%,")
 
-    # Check if size of code in optional header > sum of code sections size
+    # size of code greater than size of code section
     code_sec_size = 0
     for section in binary.sections:
-        if (section.characteristics & CNT_CODE) != 0:
+        if section.has_characteristic(CHAR.CNT_CODE):
             code_sec_size += section.size
 
     if binary.optional_header.sizeof_code > code_sec_size:
-        print(colors.RED + "[X]" + colors.DEFAULT + f" The size of code ({binary.optional_header.sizeof_code} bytes) is bigger than the sum of code sections ({code_sec_size} bytes)")
+        print((colors.RED + "[X]" + colors.DEFAULT + "The size of code (%i bytes) is bigger than the size (%i bytes) "
+                                                     "of code sections" %
+               (binary.optional_header.sizeof_code, code_sec_size)))
         csv.write("1,")
     else:
-        print(colors.GREEN + "[" + '\u2713' + "]" + colors.DEFAULT + f" The size of code ({binary.optional_header.sizeof_code} bytes) matches the sum of code sections")
+        print((colors.GREEN + "[" + '\u2713' + "]" + colors.DEFAULT + "The size of code (%i bytes) matches the size "
+                                                                      "of code sections" %
+               binary.optional_header.sizeof_code))
         csv.write("0,")

@@ -3,7 +3,8 @@ import lief
 import sys
 from . import colors
 
-lief.logging.disable()
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
+
 
 # check for anti-debugging calls
 

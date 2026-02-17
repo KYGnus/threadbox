@@ -5,7 +5,8 @@ import os
 import string
 from . import colors
 
-lief.logging.disable()
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
+
 
 # check for some possible bad strings hardcoded inside PE
 

@@ -2,7 +2,9 @@ import lief
 from . import colors
 from lief import PE
 
-lief.logging.disable()
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
+
+
 # print PE optionals header
 
 

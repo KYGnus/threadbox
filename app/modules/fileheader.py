@@ -1,10 +1,13 @@
 import lief
 from . import colors
 
-lief.logging.disable()
-# print the PE header
+# Set logging level to ERROR
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
 
 
+
+
+# Print the PE header
 def get(malware):
     print((colors.WHITE + "\n------------------------------- {0:^13}{1:3}".format(
         "HEADER", " -------------------------------" + colors.DEFAULT)))
@@ -15,18 +18,18 @@ def get(malware):
     char_str = " - ".join([str(chara).split(".")[-1]
                            for chara in header.characteristics_list])
     print((format_str.format(colors.WHITE + "Signature:" +
-                             colors.DEFAULT,               "".join(map(chr, header.signature)))))
+                             colors.DEFAULT, "".join(map(chr, header.signature)))))
     print((format_str.format(colors.WHITE + "Machine:" +
-                             colors.DEFAULT,                 str(header.machine))))
+                             colors.DEFAULT, str(header.machine))))
     print((format_dec.format(colors.WHITE + "Number of sections:" +
-                             colors.DEFAULT,      header.numberof_sections)))
+                             colors.DEFAULT, header.numberof_sections)))
     print((format_dec.format(colors.WHITE + "Time Date stamp:" +
-                             colors.DEFAULT,         header.time_date_stamps)))
+                             colors.DEFAULT, header.time_date_stamps)))
     print((format_dec.format(colors.WHITE + "Pointer to symbols:" +
-                             colors.DEFAULT,      header.pointerto_symbol_table)))
+                             colors.DEFAULT, header.pointerto_symbol_table)))
     print((format_dec.format(colors.WHITE + "Number of symbols:" +
-                             colors.DEFAULT,       header.numberof_symbols)))
+                             colors.DEFAULT, header.numberof_symbols)))
     print((format_dec.format(colors.WHITE + "Size of optional header:" +
                              colors.DEFAULT, header.sizeof_optional_header)))
     print((format_str.format(colors.WHITE + "Characteristics:" +
-                             colors.DEFAULT,         char_str)))
+                             colors.DEFAULT, char_str)))

@@ -3,7 +3,7 @@ import sys
 import lief
 from . import colors
 
-lief.logging.disable()
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
 
 # checks for suspicious calls
 

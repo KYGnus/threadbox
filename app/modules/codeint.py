@@ -1,7 +1,8 @@
 import lief
 from . import colors
 
-lief.logging.disable()
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
+
 
 # PE ignores Code Integrity? Let's find out together
 

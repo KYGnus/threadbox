@@ -1,21 +1,41 @@
 import lief
 from . import colors
 
-lief.logging.disable()
+# Set logging level
+if hasattr(lief.logging, "LEVEL"):
+    lief.logging.set_level(lief.logging.LEVEL.ERROR)
+elif hasattr(lief.logging, "Level"):
+    lief.logging.set_level(lief.logging.Level.ERROR)
+else:
+    lief.logging.disable()
 
-# Check if PE supports Data Execution Prevention (DEP)
+# Compatibility for DLL_CHARACTERISTICS
+try:
+    DLL_CHAR = lief.PE.DLL_CHARACTERISTICS
+except AttributeError:
+    # fallback for newer LIEF versions
+    try:
+        DLL_CHAR = lief.PE.OptionalHeader.DLL_CHARACTERISTICS
+    except AttributeError:
+        DLL_CHAR = None  # if not available at all
+
+
+# check if PE supports Data Execution Prevention
 def get(malware, csv):
     print((colors.WHITE + "\n------------------------------- {0:^13}{1:3}".format(
         "DEP", " -------------------------------") + colors.DEFAULT))
+    
     binary = lief.parse(malware)
-    NX_COMPAT = 0x0100  # IMAGE_DLLCHARACTERISTICS_NX_COMPAT
 
-    dll_char = binary.optional_header.dll_characteristics
-    if (dll_char & NX_COMPAT) != 0:
+    if DLL_CHAR is None:
+        print(colors.RED + "[!]" + colors.DEFAULT + " Cannot check DEP: DLL_CHARACTERISTICS not available in this LIEF version")
+        csv.write("0,")
+        return
+
+    if binary.optional_header.has(DLL_CHAR.NX_COMPAT):
         print((colors.GREEN + "[" + '\u2713' +
                "]" + colors.DEFAULT + " The file supports Data Execution Prevention (DEP)"))
         csv.write("1,")
     else:
-        print((colors.RED + "[X]" + colors.DEFAULT +
-               " The file doesn't support Data Execution Prevention (DEP)"))
+        print((colors.RED + "[X]" + colors.DEFAULT + " The file doesn't support Data Execution Prevention (DEP)"))
         csv.write("0,")

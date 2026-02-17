@@ -2,8 +2,7 @@
 
 function get_folders {
     local INDECES=()
-    AVOID="utils|deprecated"
-    for folder in $(ls -d */ | grep -vE $AVOID); do
+    for folder in $(ls -d */ | grep -v utils); do
         INDECES+="$folder "
     done
     INDECES+=". "
@@ -19,7 +18,7 @@ function gen_index {
         echo -e "/*$4*/" > $IDX_NAME
     fi
     OS=$(uname)
-    AVOID="_?index.yara?|index_|utils|deprecated"
+    AVOID="_?index.yara?|index_|utils"
     if [ x"$BASE" == x"." ]; then
         if [ $INC_MOBILE == false ]; then
             AVOID+="|Mobile"

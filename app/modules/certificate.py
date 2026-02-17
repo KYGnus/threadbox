@@ -4,7 +4,8 @@ import time
 from . import colors
 from lief.PE import oid_to_string
 
-lief.logging.disable()
+lief.logging.set_level(lief.logging.LEVEL.ERROR)
+
 
 # print PE certificates
 
