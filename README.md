@@ -527,11 +527,9 @@ of this software and associated documentation files...
 
 ## 🗺️ Roadmap
 
-- [ ] Integration with VirusTotal API
 - [ ] check Malicious URL with AI
 - [ ] analyze .exe Files with AI
 - [ ] Log Files Analyzer
-- [ ] Docker Swarm support
 
 
 
