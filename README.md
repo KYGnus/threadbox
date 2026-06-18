@@ -8,6 +8,15 @@
 
 **threadbox** is a comprehensive, enterprise-grade security platform that combines multiple malware detection engines, network traffic analysis, and threat intelligence capabilities into a unified web interface. Built for security professionals, SOC analysts, and system administrators.
 
+<p align="center">
+  <img src="./screenshots/dashboard.png" width="49%">
+  <img src="./screenshots/pcap_analysis.png" width="49%">
+</p>
+
+<p align="center">
+  <img src="./screenshots/malware_analisis.png" width="49%">
+  <img src="./screenshots/apk.png" width="49%">
+</p>
 ---
 
 ## 📋 Table of Contents
@@ -521,15 +530,8 @@ of this software and associated documentation files...
 
 ---
 
-## 🗺️ Roadmap
-
-- [ ] check Malicious URL with AI
-- [ ] analyze .exe Files with AI
-- [ ] Log Files Analyzer
 
 
-
----
 
 **Made with 🔥 by KYGnus**
 
