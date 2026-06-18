@@ -3,11 +3,11 @@ import os
 
 USERNAME = "admin"
 PASSWORD = "admin"
-SECRET_KEY = "clamNET"
-MAINDIR = "/tmp/clamnet"
-UPLOADDIR = "/tmp/clamnet/uploads"
+SECRET_KEY = "threadbox"
+MAINDIR = "/tmp/threadbox"
+UPLOADDIR = "/tmp/threadbox/uploads"
 LOCAL_CVD_FILE = "daily.cvd"
-SCAN_RESULTS = "/tmp/clamnet/scan_results"
+SCAN_RESULTS = "/tmp/threadbox/scan_results"
 
 # Get the base directory where config.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,4 +23,4 @@ APP_RULES_DIR = os.path.join(BASE_DIR, "rules")
 CAPA_SCAN = os.path.join(BASE_DIR, "capa", "capa")  # The executable inside capa directory
 FLOSS_SCAN = os.path.join(BASE_DIR, "floss", "floss")  # The executable inside floss directory
 
-MALDET = "/tmp/clamnet/maldet"
+MALDET = "/tmp/threadbox/maldet"

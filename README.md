@@ -1,8 +1,4 @@
-Here's the updated README.md with the Docker commands added to the **Docker Installation** section and a new **Docker Management** section:
-
----
-
-# clamNET - Advanced Malware Detection & Network Security Platform
+# threadbox - Advanced Malware Detection & Network Security Platform
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8%2B-green)
@@ -10,7 +6,7 @@ Here's the updated README.md with the Docker commands added to the **Docker Inst
 ![Flask](https://img.shields.io/badge/flask-2.0%2B-red)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 
-**clamNET** is a comprehensive, enterprise-grade security platform that combines multiple malware detection engines, network traffic analysis, and threat intelligence capabilities into a unified web interface. Built for security professionals, SOC analysts, and system administrators.
+**threadbox** is a comprehensive, enterprise-grade security platform that combines multiple malware detection engines, network traffic analysis, and threat intelligence capabilities into a unified web interface. Built for security professionals, SOC analysts, and system administrators.
 
 ---
 
@@ -103,8 +99,8 @@ sudo apt-get install -y clamav clamav-daemon yara python3-pip docker docker-comp
 
 ```bash
 # Clone repository
-git clone https://github.com/KYGnus/clamNET.git
-cd clamNET
+git clone https://github.com/KYGnus/threadbox.git
+cd threadbox
 
 # Build and run with Docker Compose
 docker-compose up --build
@@ -124,8 +120,8 @@ docker run -d \
 
 ```bash
 # Clone repository
-git clone https://github.com/KYGnus/clamNET.git
-cd clamNET
+git clone https://github.com/KYGnus/threadbox.git
+cd threadbox
 
 # Create virtual environment
 python3 -m venv venv
@@ -153,7 +149,7 @@ mkdir -p uploads scan_results ioc_rules/yara
 SECRET_KEY = "your-secret-key-here"
 USERNAME = "admin"
 PASSWORD = "secure-password"
-MAINDIR = "/path/to/clamNET"
+MAINDIR = "/path/to/threadbox"
 ```
 
 2. **Launch the application**:
@@ -369,7 +365,7 @@ print(f"Score: {results['score']}")
 ## 📁 Project Structure
 
 ```
-clamNET/
+threadbox/
 ├── app/                          # Application core
 │   ├── main.py                  # Main Flask application
 │   ├── config.py                # Configuration settings
@@ -434,7 +430,7 @@ USERNAME = "admin"
 PASSWORD = "your-secure-password"
 
 # Directories
-MAINDIR = "/opt/clamNET"
+MAINDIR = "/opt/threadbox"
 UPLOADDIR = os.path.join(MAINDIR, "uploads")
 SCAN_RESULTS = os.path.join(MAINDIR, "scan_results")
 IOC_RULES = os.path.join(MAINDIR, "ioc_rules")

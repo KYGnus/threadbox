@@ -100,8 +100,8 @@ MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB max file size
 
 
 
-clamNETApp = os.path.join(config.MAINDIR)  # main path
-os.makedirs(clamNETApp, exist_ok=True)
+threadboxApp = os.path.join(config.MAINDIR)  # main path
+os.makedirs(threadboxApp, exist_ok=True)
 
 SCAN_RESULTS_FOLDER = os.path.join(config.SCAN_RESULTS)  # main path
 os.makedirs(SCAN_RESULTS_FOLDER, exist_ok=True)
@@ -1707,7 +1707,7 @@ class YaraScanner:
 rule Webshell_Base64 {
     meta:
         description = "Detects base64 encoded strings commonly found in webshells"
-        author = "clamNET"
+        author = "threadbox"
         severity = "high"
     strings:
         $base64 = /[A-Za-z0-9+\/]{40,}={0,2}/
@@ -1723,7 +1723,7 @@ rule Webshell_Base64 {
 rule Suspicious_Strings {
     meta:
         description = "Detects suspicious strings commonly found in malware"
-        author = "clamNET"
+        author = "threadbox"
         severity = "medium"
     strings:
         $cmd = "cmd.exe" nocase
@@ -1740,7 +1740,7 @@ rule Suspicious_Strings {
 rule Malware_Generic_Packer {
     meta:
         description = "Detects generic packer signatures"
-        author = "clamNET"
+        author = "threadbox"
         severity = "medium"
     strings:
         $upx0 = "UPX0"
@@ -1756,7 +1756,7 @@ rule Malware_Generic_Packer {
 rule Anti_Debugging {
     meta:
         description = "Detects anti-debugging techniques"
-        author = "clamNET"
+        author = "threadbox"
         severity = "high"
     strings:
         $ptrace = "ptrace" nocase
